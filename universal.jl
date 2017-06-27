@@ -14,14 +14,14 @@ function hotset_prob(choice::Vector{Int64}, model::UniversalChoiceModel)
     return model.H[choice_size][key]
 end
 
-function loglikelihood(data::UniversalChoiceDataset, model::UniversalChoiceModel)
+function log_likelihood(data::UniversalChoiceDataset, model::UniversalChoiceModel)
     ll = 0.0
-    for (size, choice) in iter_choices(sizes, choices)
-        if in_hostset(choice, model)
+    for (size, choice) in iter_choices(data)
+        if in_hotset(choice, model)
             ll += hotset_prob(choice, model)
         else
             ll += log(model.gammas[length(choice)])
-            for item in choice; ll += log(probs[item]); end
+            for item in choice; ll += log(model.probs[item]); end
         end
     end
     return ll
@@ -37,7 +37,7 @@ function normalization_values(max_size::Int64, H::Vector{Dict{NTuple,Float64}},
     if max_size == 1; return gammas; end
     # normalization for size-2 choice probabilities
     # 2 * sum_pipj + sum_pi2 = 1
-    # gamma2 * (sum_pipj + sum_pi2) + hostset_probs2 = 1
+    # gamma2 * (sum_pipj + sum_pi2) + hotset_probs2 = 1
     sum_pi2       = sum([p^2 for p in item_probs])
     sum_pipj      = (1 - sum_pi2) / 2
     hotset_probs2 = sum([val for (key, val) in H[2]])
@@ -93,14 +93,38 @@ function normalization_values(max_size::Int64, H::Vector{Dict{NTuple,Float64}},
     return gammas
 end
 
+function update_hotset_and_model(data::UniversalChoiceDataset, model::UniversalChoiceModel,
+                                 choice_to_add::Vector{Int64})
+    if in_hotset(choice_to_add, model); error("Choice already in hot set."); end
+
+    choice_to_add_count = 0
+    item_counts = zeros(Int64, maximum(data.choices))    
+    for (size, choice) in iter_choices(data)
+        if choice == choice_to_add;
+            choice_to_add_count += 1
+        elseif !in_hotset(choice, model)
+            for item in choice
+                item_counts[item] += 1
+            end
+        end
+    end
+
+    # Update hot set probability for the new choice
+    lc = length(choice_to_add)
+    model.H[lc][NTuple{lc, Int64}(choice_to_add)] = choice_to_add_count / length(data.sizes)
+    # Update item counts
+    total = sum(item_counts)
+    for (i, count) in enumerate(item_counts); model.probs[i] = count / total; end
+    # Update normalization parameters
+    model.gammas = normalization_values(maximum(data.sizes), model.H, model.probs)
+end
+
 function initialize_model(data::UniversalChoiceDataset)
     max_size = maximum(data.sizes)
 
     # fixed-size probability are just the empirical fraction of selections
     z = zeros(Float64, max_size)
-    for (key, value) in countmap(data.sizes)
-        z[key] = value / length(data.sizes)
-    end
+    for (key, value) in countmap(data.sizes); z[key] = value / length(data.sizes); end
 
     # item probabilities are initialized to the empirical fraction of
     # appearances in choice sets
@@ -110,29 +134,51 @@ function initialize_model(data::UniversalChoiceDataset)
     end
     item_probs = zeros(Float64, length(item_counts))
     total = sum(item_counts)
-    for (i, count) in enumerate(item_counts)
-        item_probs[i] = count / total
-    end
+    for (i, count) in enumerate(item_counts); item_probs[i] = count / total; end
 
     # Initialize empty hotsets
     H = Vector{Dict{NTuple,Float64}}(max_size)
-    for i in 1:max_size
-        H[i] = Dict{NTuple{i, Int64}, Float64}()
-    end
+    for i in 1:max_size; H[i] = Dict{NTuple{i, Int64}, Float64}(); end
 
     gammas = normalization_values(max_size, H, item_probs)
 
     return UniversalChoiceModel(z, item_probs, gammas, H)
 end
 
+function update_by_frequency(data::UniversalChoiceDataset, num_updates::Int64)
+    # Get the counts
+    counts = Dict{NTuple, Int64}()
+    for (size, choice) in iter_choices(data)
+        choice_tup = NTuple{length(choice), Int64}(choice)
+        if length(choice) > 1
+            if !haskey(counts, choice_tup); counts[choice_tup] = 0; end
+            counts[choice_tup] += 1
+        end
+    end
+    counts = [(count, choice_tup) for (choice_tup, count) in counts]
+    sort!(counts, rev=true)
+    choices_to_add = [collect(choice_tup) for (count, choice_tup) in counts[1:num_updates]]
+    @show choices_to_add
+
+    model = initialize_model(data)
+    lls = Float64[]
+    push!(lls, log_likelihood(data, model))
+
+    for (i, choice) in enumerate(choices_to_add)
+        println(@sprintf("iteration %d of %d", i, num_updates))
+        update_hotset_and_model(data, model, choice)
+        #push!(lls, log_likelihood(data, model))        
+    end
+end
 
 function main()
-    data = read_data("data/kosarak-5-10.txt")
-    model = initialize_model(data)
-    @show model.z
-    @show model.probs
-    @show model.gammas
-    @show model.H
+    data = read_data("data/walmart-items-5-10.txt")
+    update_by_frequency(data, 100)
+    #model = initialize_model(data)
+    #@show model.z
+    #@show model.probs
+    #@show model.gammas
+    #@show model.H
 end
 
 main()

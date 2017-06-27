@@ -42,6 +42,7 @@ function iter_choices(data::UniversalChoiceDataset)
     choice_vec = Vector{Vector{Int64}}()
     for size in data.sizes
         choice = data.choices[curr_ind:(curr_ind + size - 1)]
+        sort!(choice)
         push!(choice_vec, choice)
         curr_ind += size
     end
