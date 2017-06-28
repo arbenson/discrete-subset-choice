@@ -1,4 +1,4 @@
-include("../util.jl")
+include("../universal.jl")
 
 using DataStructures
 
@@ -45,14 +45,12 @@ function item_frequency_cutoff(data::UniversalChoiceDataset, freq_cutoff::Int64)
     return UniversalChoiceDataset(cutoff_sizes, cutoff_choices)
 end
 
-function apply_cutoffs(dataset::AbstractString)
+function apply_cutoffs(dataset::AbstractString, size_cutoff::Int64, freq_cutoff::Int64)
     @show dataset
     orig_data = read_data(dataset)
-    cutoff_size = 5
     @show length(orig_data.sizes)
-    data = max_size_cutoff(orig_data, cutoff_size)
+    data = max_size_cutoff(orig_data, size_cutoff)
 
-    freq_cutoff = 10
     while true
         @show length(data.sizes)
         cutoff_data = item_frequency_cutoff(data, freq_cutoff)
@@ -63,18 +61,20 @@ function apply_cutoffs(dataset::AbstractString)
 
     # write out results
     basename = split(dataset, ".")[1]
-    output = open("$basename-$cutoff_size-$freq_cutoff.txt", "w")
+    output = open("$basename-$size_cutoff-$freq_cutoff.txt", "w")
     for (size, choice) in iter_choices(data)
         write(output, string(join(choice, ' '), "\n"))
     end
 end
 
 function main()
-    apply_cutoffs("bakery.txt")
-    apply_cutoffs("instacart.txt")
-    apply_cutoffs("walmart-items.txt")
-    apply_cutoffs("walmart-depts.txt")
-    apply_cutoffs("kosarak.txt")
+    #apply_cutoffs("bakery.txt")
+    #apply_cutoffs("walmart-items.txt")
+    #apply_cutoffs("walmart-depts.txt")
+    #apply_cutoffs("kosarak.txt", 5, 25)
+    #apply_cutoffs("instacart.txt", 5, 25)
+    apply_cutoffs("lastfm-artists.txt", 5, 25)
+    apply_cutoffs("lastfm-genres.txt", 5, 25)    
 end
 
 main()

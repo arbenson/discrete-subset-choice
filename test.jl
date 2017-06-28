@@ -1,9 +1,11 @@
 include("universal.jl")
 
+using Base.Test
+
 function test()
     function test_normalization(data::UniversalChoiceDataset, model::UniversalChoiceModel)
         p = model.probs
-        n = maximum(data.choices)
+        n = length(unique(data.choices))
         @show n
         
         p1 = sum([val for (key, val) in model.H[1]])

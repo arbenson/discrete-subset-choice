@@ -1,7 +1,70 @@
-include("util.jl")
-
 using StatsBase
-using Base.Test
+
+# Represent a universal choice dataset as a vector of sizes (lengths of choices)
+# and a vector of all items in all choices.
+mutable struct UniversalChoiceDataset
+    sizes::Vector{Int64}
+    choices::Vector{Int64}
+end
+
+# Probabilistic universal subset choice model.
+#
+# -z is a vector of length max_size with the probability of choosing
+#  a size-k subset being z[k]
+# -probs are the item probabilities
+# -gammas is a vector of length max_size of normalization parameters
+# -H is a vector of length max_size where each element
+#  is a dictionary that maps a choice to a probability.
+mutable struct UniversalChoiceModel
+    z::Vector{Float64}
+    probs::Vector{Float64}
+    gammas::Vector{Float64}
+    H::Vector{Dict{NTuple,Float64}}
+end
+
+# Read text data
+function read_data(dataset::AbstractString)
+    f = open(dataset)
+    choices = Int64[]
+    sizes = Int64[]
+    for line in eachline(f)
+        choice = [parse(Int64, v) for v in split(line)]
+        append!(choices, choice)
+        push!(sizes, length(choice))
+    end
+    return UniversalChoiceDataset(sizes, choices)
+end
+
+# iterator over choices
+#
+# This is only syntactic sugar.  It pre-allocates the entire size of the output.
+# Unfortunately, a "real" iterator with a Channel is too slow.
+function iter_choices(data::UniversalChoiceDataset)
+    curr_ind = 1
+    choice_vec = Vector{Vector{Int64}}()
+    for size in data.sizes
+        choice = data.choices[curr_ind:(curr_ind + size - 1)]
+        sort!(choice)
+        push!(choice_vec, choice)
+        curr_ind += size
+    end
+    return zip(data.sizes, choice_vec)
+end
+
+#=
+# iterator over choices (SLOW!!)
+function iter_choices(sizes::Vector{Int64}, choices::Vector{Int64})
+    curr_ind = 1
+    function temp(c::Channel{Tuple{Int64,Vector{Int64}}})
+        for size in sizes
+            choice = choices[curr_ind:(curr_ind + size - 1)]
+            push!(c, (size, choice))
+            curr_ind += size
+        end
+    end
+    return Channel(temp, ctype=Tuple{Int64,Vector{Int64}})
+end
+=#
 
 function in_hotset(choice::Vector{Int64}, model::UniversalChoiceModel)
     choice_size = length(choice)
@@ -18,8 +81,9 @@ end
 function log_likelihood(data::UniversalChoiceDataset, model::UniversalChoiceModel)
     ll = 0.0
     for (size, choice) in iter_choices(data)
+        ll += log(model.z[length(choice)])
         if in_hotset(choice, model)
-            ll += hotset_prob(choice, model)
+            ll += log(hotset_prob(choice, model))
         else
             ll += log(model.gammas[length(choice)])
             for item in choice; ll += log(model.probs[item]); end
@@ -85,8 +149,7 @@ function update_hotset_and_model(data::UniversalChoiceDataset, model::UniversalC
     if in_hotset(choice_to_add, model); error("Choice already in hot set."); end
 
     choice_to_add_count = 0
-    total_choices = 0
-    item_counts = zeros(Int64, maximum(data.choices))    
+    item_counts = zeros(Int64, maximum(data.choices))
     for (size, choice) in iter_choices(data)
         if choice == choice_to_add;
             choice_to_add_count += 1
@@ -95,12 +158,12 @@ function update_hotset_and_model(data::UniversalChoiceDataset, model::UniversalC
                 item_counts[item] += 1
             end
         end
-        total_choices += 1
     end
 
     # Update hot set probability for the new choice
+    choices_same_size = countmap(data.sizes)[length(choice_to_add)]
     lc = length(choice_to_add)
-    model.H[lc][NTuple{lc, Int64}(choice_to_add)] = choice_to_add_count / total_choices
+    model.H[lc][NTuple{lc, Int64}(choice_to_add)] = choice_to_add_count / choices_same_size
     # Update item counts
     total = sum(item_counts)
     for (i, count) in enumerate(item_counts); model.probs[i] = count / total; end
@@ -133,42 +196,3 @@ function initialize_model(data::UniversalChoiceDataset)
 
     return UniversalChoiceModel(z, item_probs, gammas, H)
 end
-
-function update_by_frequency(data::UniversalChoiceDataset, num_updates::Int64)
-    # Get the counts
-    counts = Dict{NTuple, Int64}()
-    for (size, choice) in iter_choices(data)
-        choice_tup = NTuple{length(choice), Int64}(choice)
-        if length(choice) > 1
-            if !haskey(counts, choice_tup); counts[choice_tup] = 0; end
-            counts[choice_tup] += 1
-        end
-    end
-    counts = [(count, choice_tup) for (choice_tup, count) in counts]
-    sort!(counts, rev=true)
-    choices_to_add = [collect(choice_tup) for (count, choice_tup) in counts[1:num_updates]]
-    @show choices_to_add
-
-    model = initialize_model(data)
-    lls = Float64[]
-    push!(lls, log_likelihood(data, model))
-
-    for (i, choice) in enumerate(choices_to_add)
-        println(@sprintf("iteration %d of %d", i, num_updates))
-        update_hotset_and_model(data, model, choice)
-        #push!(lls, log_likelihood(data, model))        
-    end
-end
-
-
-function main()
-    data = read_data("data/bakery-5-10.txt")
-    update_by_frequency(data, 100)
-    #model = initialize_model(data)
-    #@show model.z
-    #@show model.probs
-    #@show model.gammas
-    #@show model.H
-end
-
-
