@@ -1,6 +1,7 @@
 include("util.jl")
 
 using StatsBase
+using Base.Test
 
 function in_hotset(choice::Vector{Int64}, model::UniversalChoiceModel)
     choice_size = length(choice)
@@ -56,35 +57,28 @@ function normalization_values(max_size::Int64, H::Vector{Dict{NTuple,Float64}},
 
     if max_size == 3; return gammas; end
     # normalization for size-4 choice probabilities
-    # 24 * sum_pipjpkpl + 6 * sum_pi2pj2 + 4 * sum_pipj3 + sum_pi4 = 1
+    # 24 * sum_pipjpkpl + 6 * sum_pi2pj2 + 4 * sum_pipj3 + 12 * sum_pipjpk2 + sum_pi4 = 1
     # sum_pi2pj2 + sum_pi4 = (sum_pi2)^2
     # sum_pipj3 + sum_pi4 = sum_pi3
-    # gamma * (sum_pipjpkpl + sum_pi2pj2 + sum_pipj3 + sum_pi4) + hotset_probs4 = 1
+    # 2 * sum_pipjpk2 + 2 * sum_pipj3 + + 2 * sum_pi2pj2 + sum_pi4 = sum_pi2
+    # gamma * (sum_pipjpkpl + sum_pi2pj2 + sum_pipj3 + sum_pipjpk2 + sum_pi4) + hotset_probs4 = 1
     sum_pi4       = sum([p^4 for p in item_probs])
-    sum_pi2pj2    = sum_pi2 ^ 2 - sum_pi4
+    sum_pi2pj2    = (sum_pi2 ^ 2 - sum_pi4) / 2
     sum_pipj3     = sum_pi3 - sum_pi4
-    sum_pipjpkpl  = (1 - sum_pi4 - 4 * sum_pipj3 - 6 * sum_pi2pj2) / 24
+    sum_pipjpk2   = (sum_pi2 - sum_pi4 - 2 * sum_pipj3 - 2 * sum_pi2pj2) / 2    
+    sum_pipjpkpl  = (1 - sum_pi4 - 4 * sum_pipj3 - 6 * sum_pi2pj2 - 12 * sum_pipjpk2) / 24    
     hotset_probs4 = sum([val for (key, val) in H[4]])
-    gammas[4]     = (1 - hotset_probs4) / (sum_pipjpkpl + sum_pi2pj2 + sum_pipj3 + sum_pi4)
+    gammas[4]     = (1 - hotset_probs4) / (sum_pipjpkpl + sum_pi2pj2 + sum_pipj3 + sum_pipjpk2 + sum_pi4)
     
     if max_size == 4; return gammas; end
     # normalization for size-5 choice probabilities
-    # 120 * sum_pipjpkplpm + 10 * sum_pipjpkpl2 + 10 * sum_pipjpk3 + 5 * sum_pipj4 + 10 * sum_pi2pj3 + sum_pi5  = 1
-    # sum_pipj4 + sum_pi5 = sum_pi4
-    # sum_pi2pj3 + sum_pi5 = sum_pi2 * sum_pi3
-    # sum_pipj2pjk2 + sum_pipj4 + sum_pi5 = sum_pi2 ^ 2
-    # sum_pipjpk3 + sum_pipj4 + sum_pi5 = sum_pi3
-    # sum_pipjpkpl2 + sum_pipjpk3 + sum_pipj4 + sum_pi2pj3 + sum_pipj2pk2 = sum_pi2
-    sum_pi5        = sum([p^5 for p in item_probs])
-    sum_pipj4      = sum_pi4 - sum_pi5
-    sum_pi2pj3     = sum_pi2 * sum_pi3 - sum_pi5
-    sum_pipj2pk2  = sum_pi2 ^ 2 - sum_pipj4 - sum_pi5
-    sum_pipjpk3    = sum_pi3 - sum_pipj4 - sum_pi5
-    sum_pipjpkpl2  = sum_pi2 - sum_pipjpk3 - sum_pipj4 - sum_pi2pj3 - sum_pipj2pk2
-    sum_pipjpkplpm = (1 - 10 * sum_pipjpkpl2 - 10 * sum_pipjpk3 - 5 * sum_pipj4 - 10 * sum_pi2pj3 + sum_pi5) / 120
-    hotset_probs5  = sum([val for (key, val) in H[5]])
-    gammas[5]      = (1 - hotset_probs5) / (sum_pipjpkplpm + sum_pipjpkpl2 + sum_pipjpk3 + sum_pipj4 + sum_pi2pj3 + sum_pi5)
-
+    sum_pi5       = sum([p^5 for p in item_probs])
+    sum_pipj4     = sum_pi4 - sum_pi5
+    sum_pi2pj3    = sum_pi2 * sum_pi3 - sum_pi5
+    sum_pipjpk3   = (sum_pi3 - sum_pi5 - 2 * sum_pipj4 - sum_pi2pj3) / 2
+    
+    gammas[5] = 1
+    
     # TODO: support larger sizes.  We really shouldn't hard code the above.
     # There is a triangular system we can solve to automatically determine these
     # values, but it is annoying to set up.
@@ -171,8 +165,125 @@ function update_by_frequency(data::UniversalChoiceDataset, num_updates::Int64)
     end
 end
 
+function test()
+    data = read_data("data/bakery-5-10.txt")
+    model = initialize_model(data)
+
+    p = model.probs
+    n = maximum(data.choices)
+    @show n
+    
+    p1 = sum([val for (key, val) in model.H[1]])
+    g = model.gammas[1]    
+    for i = 1:n; p1 += g * p[i]; end
+    @test p1 ≈ 1
+
+    p2 = sum([val for (key, val) in model.H[2]])
+    g = model.gammas[2]
+    for i = 1:n; for j = i:n; p2 += g * p[i] * p[j]; end; end
+    @test p2 ≈ 1    
+
+    p3 = sum([val for (key, val) in model.H[3]])
+    g = model.gammas[3]
+    for i = 1:n; for j = i:n; for k = j:n; p3 += g * p[i] * p[j] * p[k]; end; end; end
+    @test p3 ≈ 1    
+
+    p4 = sum([val for (key, val) in model.H[4]])
+    g = model.gammas[4]
+    for i = 1:n; for j = i:n; for k = j:n; for l = k:n; p4 += g * p[i] * p[j] * p[k] * p[l]; end; end; end; end
+    @test p4 ≈ 1    
+
+    sum_pi2       = sum([v^2 for v in p])        
+    sum_pi3       = sum([v^3 for v in p])    
+    sum_pi4       = sum([v^4 for v in p])
+    sum_pi5       = sum([v^5 for v in p])
+
+    sum_pipj4     = sum_pi4 - sum_pi5
+    test_pipj4 = 0.0
+    for i = 1:n
+        for j = 1:n
+            if j != i
+                test_pipj4 += p[i] * p[j]^4
+            end
+        end
+    end
+    @test test_pipj4 ≈ sum_pipj4
+
+    sum_pi2pj3    = sum_pi2 * sum_pi3 - sum_pi5
+    test_pi2pj3 = 0.0    
+    for i = 1:n
+        for j = 1:n
+            if j != i
+                test_pi2pj3 += p[i]^2 * p[j]^3
+            end
+        end
+    end
+    @test test_pi2pj3 ≈ sum_pi2pj3
+
+    sum_pipjpk3   = (sum_pi3 - sum_pi5 - 2 * sum_pipj4 - sum_pi2pj3) / 2
+    test_pipjpk3  = 0.0
+    for i = 1:n
+        for j = (i+1):n
+            for k = 1:n
+                if k != i && k != j
+                    test_pipjpk3 += p[i] * p[j] * p[k]^3
+                end
+            end
+        end
+    end
+    @test test_pipjpk3 ≈ sum_pipjpk3
+
+    sum_pipj2pk2 = (sum_pi2^2 - sum_pipj4 - 2 * sum_pi2pj3 - sum_pi5) / 2
+    test_pipj2pk2 = 0.0
+    for i = 1:n
+        for j = 1:n
+            for k = (j+1):n
+                if i != j && i != k
+                    test_pipj2pk2 += p[i] * p[j]^2 * p[k]^2
+                end
+            end
+        end
+    end
+    @test test_pipj2pk2 ≈ sum_pipj2pk2
+
+    sum_pipjpkpl2 = (sum_pi2 - 3 * sum_pipjpk3) / 6
+    test_pipjpkpl2 = 0.0
+    for i = 1:n
+        for j = (i+1):n
+            for k = (j+1):n
+                for l = 1:n
+                    if l != i && l != j && l != k
+                        test_pipjpkpl2 += p[i] * p[j] * p[k] * p[l]^2
+                    end
+                end
+            end
+        end
+    end
+    #@test test_pipjpkpl2 ≈ sum_pipjpkpl2
+
+    sum_pipjpkplpm = (1 - 5 * sum_pipj4 - 10 * sum_pipjpk3 - 10 * test_pipjpkpl2 - 30 * sum_pipj2pk2) / 120
+    test_pipjpkplpm = 0.0
+    for i = 1:n
+        for j = (i+1):n
+            for k = (j+1):n
+                for l = (k+1):n
+                    for m = (l+1):n
+                        test_pipjpkplpm += p[i] * p[j] * p[k] * p[l] * p[m]
+                    end
+                end
+            end
+        end
+    end
+    @test test_pipjpkplpm ≈ sum_pipjpkplpm
+    
+    p5 = sum([val for (key, val) in model.H[5]])
+    g = model.gammas[5]
+    for i = 1:n; for j = i:n; for k = j:n; for l = k:n; for m = l:n; p5 += g * p[i] * p[j] * p[k] * p[l] * p[m]; end; end; end; end; end
+    @test p5 ≈ 1    
+end
+
 function main()
-    data = read_data("data/walmart-items-5-10.txt")
+    data = read_data("data/bakery-5-10.txt")
     update_by_frequency(data, 100)
     #model = initialize_model(data)
     #@show model.z
@@ -181,4 +292,4 @@ function main()
     #@show model.H
 end
 
-main()
+test()
