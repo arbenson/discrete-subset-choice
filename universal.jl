@@ -81,7 +81,7 @@ end
 function log_likelihood(data::UniversalChoiceDataset, model::UniversalChoiceModel)
     ll = 0.0
     for (size, choice) in iter_choices(data)
-        ll += log(model.z[length(choice)])
+        ll += log(model.z[size])
         if in_hotset(choice, model)
             ll += log(hotset_prob(choice, model))
         else
@@ -151,7 +151,7 @@ function update_hotset_and_model(data::UniversalChoiceDataset, model::UniversalC
     choice_to_add_count = 0
     item_counts = zeros(Int64, maximum(data.choices))
     for (size, choice) in iter_choices(data)
-        if choice == choice_to_add;
+        if choice == choice_to_add
             choice_to_add_count += 1
         elseif !in_hotset(choice, model)
             for item in choice
