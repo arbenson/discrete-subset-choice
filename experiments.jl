@@ -9,7 +9,7 @@ function negative_corrections(data::UniversalChoiceDataset, num_updates::Int64,
     num_negative_corrections = Int64[]
     for (i, choice) in enumerate(choices_to_add)
         println(@sprintf("iteration %d of %d", i, num_updates))
-        update_hotset_and_model(data, model, choice)
+        add_to_hotset(model, choice)
 
         # Get negative corrections
         count = 0
@@ -103,7 +103,7 @@ function universal_improvements(data::UniversalChoiceDataset, num_updates::Int64
             lifts = Vector{Tuple{Float64,NTuple}}()
             for (choice_tup, subset_count) in get_subset_counts(training_data)
                 subset_item_counts = [item_counts[item] for item in choice_tup]
-                push!(lifts, (subset_count^2 / prod(subset_item_counts), choice_tup))
+                push!(lifts, (subset_count / prod(subset_item_counts), choice_tup))
             end
             sort!(lifts, rev=true)
             choices_to_add = [collect(choice_tup) for (_, choice_tup) in lifts[1:num_updates]]
@@ -114,7 +114,7 @@ function universal_improvements(data::UniversalChoiceDataset, num_updates::Int64
             end
         elseif update_type == "lev"
             # Leverage-based updates
-            levs = Vector{Tuple{Float64,NTuple}}()
+            levs = Vector{Tuple{Int64,NTuple}}()
             for (choice_tup, subset_count) in get_subset_counts(training_data)
                 subset_item_counts = [item_counts[item] for item in choice_tup]
                 push!(levs, (subset_count - prod(subset_item_counts), choice_tup))
@@ -173,8 +173,9 @@ function universal_improvement_experiments()
         #universal_improvements(data, num_updates, basename, "f")
         #universal_improvements(data, num_updates, basename, "nl")
         #universal_improvements(data, num_updates, basename, "l")
-        universal_improvements(data, num_updates, basename, "lev")
+        #universal_improvements(data, num_updates, basename, "lev")
         #universal_improvements(data, num_updates, basename, "g")
+        negative_corrections(data, num_updates, basename)
     end
 
     run_universal_improvement_experiment("data/bakery-5-25.txt")
