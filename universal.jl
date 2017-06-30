@@ -53,21 +53,6 @@ function iter_choices(data::UniversalChoiceDataset)
     return zip(data.sizes, choice_vec)
 end
 
-#=
-# iterator over choices (SLOW!!)
-function iter_choices(sizes::Vector{Int64}, choices::Vector{Int64})
-    curr_ind = 1
-    function temp(c::Channel{Tuple{Int64,Vector{Int64}}})
-        for size in sizes
-            choice = choices[curr_ind:(curr_ind + size - 1)]
-            push!(c, (size, choice))
-            curr_ind += size
-        end
-    end
-    return Channel(temp, ctype=Tuple{Int64,Vector{Int64}})
-end
-=#
-
 function in_hotset(choice::Vector{Int64}, model::UniversalChoiceModel)
     choice_size = length(choice)
     key = NTuple{choice_size, Int64}(choice)
@@ -102,7 +87,7 @@ end
 function normalization_values(max_size::Int64, H::Vector{Dict{NTuple,Float64}},
                               item_probs::Vector{Float64})
     gammas = zeros(Float64, max_size)
-        
+
     # No hotsets of size 1
     gammas[1] = 1
     
@@ -167,9 +152,7 @@ function update_hotset_and_model(data::UniversalChoiceDataset, model::UniversalC
         if choice == choice_to_add
             choice_to_add_count += 1
         elseif !in_hotset(choice, model)
-            for item in choice
-                item_counts[item] += 1
-            end
+            for item in choice; item_counts[item] += 1; end
         end
     end
 
@@ -204,6 +187,7 @@ function initialize_model(data::UniversalChoiceDataset)
     H = Vector{Dict{NTuple,Float64}}(max_size)
     for i in 1:max_size; H[i] = Dict{NTuple{i, Int64}, Float64}(); end
 
+    # Initialize normalization constants (gammas)
     gammas = normalization_values(max_size, H, item_probs)
 
     return UniversalChoiceModel(z, item_probs, gammas, H)
