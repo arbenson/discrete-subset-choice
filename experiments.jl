@@ -1,34 +1,15 @@
 include("universal.jl")
 
-function subset_counts(data::UniversalChoiceDataset)
-    # Get the counts
-    counts = Dict{NTuple, Int64}()
-    for (size, choice) in iter_choices(data)
-        choice_tup = NTuple{length(choice), Int64}(choice)
-        if length(choice) > 1
-            if !haskey(counts, choice_tup); counts[choice_tup] = 0; end
-            counts[choice_tup] += 1
-        end
-    end
-    return counts
-end
-
-function update_by_frequency(data::UniversalChoiceDataset, num_updates::Int64,
-                             basename::AbstractString)
-    counts = [(count, choice_tup) for (choice_tup, count) in subset_counts(data)]
+function negative_corrections(data::UniversalChoiceDataset, num_updates::Int64,
+                              basename::AbstractString)
+    counts = [(count, choice_tup) for (choice_tup, count) in get_subset_counts(data)]
     sort!(counts, rev=true)
     choices_to_add = [collect(choice_tup) for (count, choice_tup) in counts[1:num_updates]]
-
     model = initialize_model(data)
-    log_likelihoods = Float64[]
-    push!(log_likelihoods, log_likelihood(data, model))
     num_negative_corrections = Int64[]
-
     for (i, choice) in enumerate(choices_to_add)
         println(@sprintf("iteration %d of %d", i, num_updates))
         update_hotset_and_model(data, model, choice)
-        ll = log_likelihood(data, model)
-        push!(log_likelihoods, ll)
 
         # Get negative corrections
         count = 0
@@ -43,67 +24,165 @@ function update_by_frequency(data::UniversalChoiceDataset, num_updates::Int64,
         push!(num_negative_corrections, count)
     end
 
-    output = open("output/$basename-freq.txt", "w")
-    for (i, ll) in enumerate(log_likelihoods)
-        write(output, @sprintf("%d %f\n", i - 1, ll))
-    end
-    close(output)
-
     output = open("output/$basename-freq-neg-corrections.txt", "w")
     for (i, num) in enumerate(num_negative_corrections)
         write(output, @sprintf("%d %d\n", i, num))
     end
 end
 
-function update_by_lift(data::UniversalChoiceDataset, num_updates::Int64,
-                        basename::AbstractString)
-    # individual item counts
-    item_counts = zeros(Int64, maximum(data.choices))
-    for (size, choice) in iter_choices(data)
-        for item in choice; item_counts[item] += 1; end
-    end
-    lifts = Vector{Tuple{Float64,NTuple}}()
-    for (choice_tup, subset_count) in subset_counts(data)
-        subset_item_counts = [item_counts[item] for item in choice_tup]
-        push!(lifts, (subset_count^2 / prod(subset_item_counts), choice_tup))
-    end
-    sort!(lifts, rev=true)
-    choices_to_add = [collect(choice_tup) for (_, choice_tup) in lifts[1:num_updates]]
 
-    model = initialize_model(data)    
-    log_likelihoods = Float64[]
-    push!(log_likelihoods, log_likelihood(data, model))
-    
-    for (i, choice) in enumerate(choices_to_add)
-        println(@sprintf("iteration %d of %d", i, num_updates))
-        update_hotset_and_model(data, model, choice)
-        ll = log_likelihood(data, model)
-        push!(log_likelihoods, ll)
+function universal_improvements(data::UniversalChoiceDataset, num_updates::Int64,
+                                basename::AbstractString, update_type::AbstractString)
+    # Vector for randomly splitting into training / test data
+    inds = collect(1:length(data.sizes))
+    shuffle!(inds)
+    num_folds = 10
+    log_likelihoods = zeros(Float64, num_updates + 1, num_folds)
+
+    for fold in 1:num_folds
+        println(@sprintf("fold %d of %d", fold, num_folds))
+
+        # Split into training / test data
+        n = length(data.sizes)
+        training = ones(Int64, n)
+        fold_size = convert(Int64, floor(n / num_folds))
+        test_start_ind = (fold - 1) * fold_size + 1
+        test_end_ind = fold * fold_size
+        if fold == num_folds; test_end_ind = n; end
+        training[test_start_ind:test_end_ind] = 0
+        training = training[inds]
+        training_sizes = Int64[]
+        training_choices = Int64[]
+        test_sizes = Int64[]
+        test_choices = Int64[]        
+        for (ind, (size, choice)) in enumerate(iter_choices(data))
+            if training[ind] == 1
+                push!(training_sizes, size)
+                append!(training_choices, choice)
+            else
+                push!(test_sizes, size)
+                append!(test_choices, choice)
+            end
+        end
+        training_data = UniversalChoiceDataset(training_sizes, training_choices)
+        test_data = UniversalChoiceDataset(test_sizes, test_choices)
+        model = initialize_model(training_data)
+        log_likelihoods[1, fold] = log_likelihood(test_data, model)
+
+        item_counts = zeros(Int64, maximum(data.choices))
+        for (size, choice) in iter_choices(training_data)
+            for item in choice; item_counts[item] += 1; end
+        end
+        counts = [(count, choice_tup) for (choice_tup, count) in get_subset_counts(training_data)]
+        sort!(counts, rev=true)
+
+        if     update_type == "f"
+            # Frequency-based updates
+            choices_to_add = [collect(choice_tup) for (count, choice_tup) in counts[1:num_updates]]
+            for (i, choice) in enumerate(choices_to_add)
+                println(@sprintf("iteration %d of %d", i, num_updates))
+                add_to_hotset(model, choice)
+                log_likelihoods[i + 1, fold] = log_likelihood(test_data, model)
+            end
+        elseif update_type == "nl"
+            # normalized lift-based updates
+            lifts = Vector{Tuple{Float64,NTuple}}()
+            for (choice_tup, subset_count) in get_subset_counts(training_data)
+                subset_item_counts = [item_counts[item] for item in choice_tup]
+                push!(lifts, (subset_count^2 / prod(subset_item_counts), choice_tup))
+            end
+            sort!(lifts, rev=true)
+            choices_to_add = [collect(choice_tup) for (_, choice_tup) in lifts[1:num_updates]]
+            for (i, choice) in enumerate(choices_to_add)
+                println(@sprintf("iteration %d of %d", i, num_updates))
+                add_to_hotset(model, choice)
+                log_likelihoods[i + 1, fold] = log_likelihood(test_data, model)
+            end
+        elseif update_type == "l"
+            # Lift-based updates
+            lifts = Vector{Tuple{Float64,NTuple}}()
+            for (choice_tup, subset_count) in get_subset_counts(training_data)
+                subset_item_counts = [item_counts[item] for item in choice_tup]
+                push!(lifts, (subset_count^2 / prod(subset_item_counts), choice_tup))
+            end
+            sort!(lifts, rev=true)
+            choices_to_add = [collect(choice_tup) for (_, choice_tup) in lifts[1:num_updates]]
+            for (i, choice) in enumerate(choices_to_add)
+                println(@sprintf("iteration %d of %d", i, num_updates))
+                add_to_hotset(model, choice)
+                log_likelihoods[i + 1, fold] = log_likelihood(test_data, model)
+            end
+        elseif update_type == "lev"
+            # Leverage-based updates
+            levs = Vector{Tuple{Float64,NTuple}}()
+            for (choice_tup, subset_count) in get_subset_counts(training_data)
+                subset_item_counts = [item_counts[item] for item in choice_tup]
+                push!(levs, (subset_count - prod(subset_item_counts), choice_tup))
+            end
+            sort!(levs, rev=true)
+            choices_to_add = [collect(choice_tup) for (_, choice_tup) in levs[1:num_updates]]
+            for (i, choice) in enumerate(choices_to_add)
+                println(@sprintf("iteration %d of %d", i, num_updates))
+                add_to_hotset(model, choice)
+                log_likelihoods[i + 1, fold] = log_likelihood(test_data, model)
+            end
+        elseif update_type == "g"
+            # Greedy-based updates
+            considered_sets = [collect(choice_tup) for (count, choice_tup) in counts[1:num_updates]]
+            for i = 1:num_updates
+                println(@sprintf("iteration %d of %d", i, num_updates))                
+                best_update = ()
+                best_ll = log_likelihood(training_data, model)
+                for subset in considered_sets
+                    if !in_hotset(subset, model)
+                        add_to_hotset(model, subset)
+                        ll = log_likelihood(training_data, model)
+                        if ll > best_ll || length(best_update) == 0
+                            best_ll = ll
+                            best_update = subset
+                        end
+                        remove_from_hotset(model, subset)
+                    end
+                end
+                add_to_hotset(model, best_update)
+                log_likelihoods[i + 1, fold] = log_likelihood(test_data, model)
+            end
+        else
+            error("Unknown update type")
+        end
     end
 
-    output = open("output/$basename-lift.txt", "w")
-    for (i, ll) in enumerate(log_likelihoods)
-        write(output, @sprintf("%d %f\n", i - 1, ll))
+    if     update_type == "f";   output = open("output/$basename-freq.txt", "w")
+    elseif update_type == "l";   output = open("output/$basename-lift.txt", "w")
+    elseif update_type == "nl";  output = open("output/$basename-nlift.txt", "w")
+    elseif update_type == "lev"; output = open("output/$basename-lev.txt", "w")
+    elseif update_type == "g";   output = open("output/$basename-greedy.txt", "w")        
+    else   error("Unknown update type")    end
+    for i = 0:num_updates
+        write(output, @sprintf("%d %s\n", i, join(log_likelihoods[i + 1, :], " ")))
     end
 end
 
 
-function frequency_experiments()
-    function run_experiment(dataset_file::AbstractString)
+function universal_improvement_experiments()
+    function run_universal_improvement_experiment(dataset_file::AbstractString)
         data = read_data(dataset_file)
         basename = split(split(dataset_file, "/")[end], ".")[1]
         num_items = length(unique(data.choices))
         num_updates = min(num_items, 1000)
-        update_by_frequency(data, num_updates, basename)
-        #update_by_lift(data, num_updates, basename)
+        #universal_improvements(data, num_updates, basename, "f")
+        #universal_improvements(data, num_updates, basename, "nl")
+        #universal_improvements(data, num_updates, basename, "l")
+        universal_improvements(data, num_updates, basename, "lev")
+        #universal_improvements(data, num_updates, basename, "g")
     end
 
-    #run_experiment("data/bakery-5-10.txt")
-    #run_experiment("data/walmart-depts-5-10.txt")
-    #run_experiment("data/walmart-items-5-10.txt")
-    #run_experiment("data/kosarak-5-25.txt")
-    #run_experiment("data/lastfm-genres-5-25.txt")
-    run_experiment("data/instacart-5-25.txt")
+    run_universal_improvement_experiment("data/bakery-5-25.txt")
+    run_universal_improvement_experiment("data/walmart-depts-5-25.txt")
+    run_universal_improvement_experiment("data/walmart-items-5-25.txt")
+    run_universal_improvement_experiment("data/lastfm-genres-5-25.txt")
+    run_universal_improvement_experiment("data/kosarak-5-25.txt")
+    run_universal_improvement_experiment("data/instacart-5-25.txt")
 end
 
-frequency_experiments()
+universal_improvement_experiments()

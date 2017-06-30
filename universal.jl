@@ -21,6 +21,26 @@ mutable struct UniversalChoiceModel
     probs::Vector{Float64}
     gammas::Vector{Float64}
     H::Vector{Dict{NTuple,Float64}}
+    # Some data to make updating computations faster
+    # how often each item appears not in a hot set    
+    item_counts::Vector{Int64}
+    # how many times each subset appears
+    subset_counts::Dict{NTuple,Int64}
+    # number of times choice set of each size appears
+    size_counts::Vector{Int64}
+end
+
+function get_subset_counts(data::UniversalChoiceDataset)
+    # Get the counts
+    counts = Dict{NTuple, Int64}()
+    for (size, choice) in iter_choices(data)
+        choice_tup = NTuple{length(choice), Int64}(choice)
+        if length(choice) > 1
+            if !haskey(counts, choice_tup); counts[choice_tup] = 0; end
+            counts[choice_tup] += 1
+        end
+    end
+    return counts
 end
 
 # Read text data
@@ -142,36 +162,53 @@ function normalization_values(max_size::Int64, H::Vector{Dict{NTuple,Float64}},
     return gammas
 end
 
-function update_hotset_and_model(data::UniversalChoiceDataset, model::UniversalChoiceModel,
-                                 choice_to_add::Vector{Int64})
+function add_to_hotset(model::UniversalChoiceModel, choice_to_add::Vector{Int64})
     if in_hotset(choice_to_add, model); error("Choice already in hot set."); end
-
-    choice_to_add_count = 0
-    item_counts = zeros(Int64, maximum(data.choices))
-    for (size, choice) in iter_choices(data)
-        if choice == choice_to_add
-            choice_to_add_count += 1
-        elseif !in_hotset(choice, model)
-            for item in choice; item_counts[item] += 1; end
-        end
-    end
-
-    # Update hot set probability for the new choice
     lc = length(choice_to_add)
-    model.H[lc][NTuple{lc, Int64}(choice_to_add)] = choice_to_add_count / countmap(data.sizes)[lc]
-    # Update item counts
-    total = sum(item_counts)
-    for (i, count) in enumerate(item_counts); model.probs[i] = count / total; end
+    choice_tup = NTuple{lc, Int64}(choice_to_add)
+
+    # Update hotset probability
+    choice_count = model.subset_counts[choice_tup]
+    model.H[lc][choice_tup] =  choice_count / model.size_counts[lc]
+
+    # Update item counts and probability
+    for item in choice_to_add; model.item_counts[item] -= choice_count; end
+    total = sum(model.item_counts)
+    for (i, count) in enumerate(model.item_counts); model.probs[i] = count / total; end
+
     # Update normalization parameters
-    model.gammas = normalization_values(maximum(data.sizes), model.H, model.probs)
+    model.gammas = normalization_values(length(model.gammas), model.H, model.probs)
 end
+
+function remove_from_hotset(model::UniversalChoiceModel, choice_to_rm::Vector{Int64})
+    if !in_hotset(choice_to_rm, model); error("Choice not in hot set."); end
+    lc = length(choice_to_rm)
+    choice_tup = NTuple{lc, Int64}(choice_to_rm)
+
+    # Update hotset probability
+    delete!(model.H[lc], choice_tup)
+
+    # Update item counts and probability
+    choice_count = model.subset_counts[choice_tup]
+    for item in choice_to_rm; model.item_counts[item] += choice_count; end
+    total = sum(model.item_counts)
+    for (i, count) in enumerate(model.item_counts); model.probs[i] = count / total; end
+
+    # Update normalization parameters
+    model.gammas = normalization_values(length(model.gammas), model.H, model.probs)
+end
+
 
 function initialize_model(data::UniversalChoiceDataset)
     max_size = maximum(data.sizes)
 
     # fixed-size probability are just the empirical fraction of selections
     z = zeros(Float64, max_size)
-    for (key, value) in countmap(data.sizes); z[key] = value / length(data.sizes); end
+    size_counts = zeros(Int64, max_size)
+    for (key, value) in countmap(data.sizes)
+        z[key] = value / length(data.sizes)
+        size_counts[key] = value
+    end
 
     # item probabilities are initialized to the empirical fraction of
     # appearances in choice sets
@@ -190,5 +227,9 @@ function initialize_model(data::UniversalChoiceDataset)
     # Initialize normalization constants (gammas)
     gammas = normalization_values(max_size, H, item_probs)
 
-    return UniversalChoiceModel(z, item_probs, gammas, H)
+    # Counts of how many times each choice set appears
+    subset_counts = get_subset_counts(data::UniversalChoiceDataset)
+
+    return UniversalChoiceModel(z, item_probs, gammas, H, item_counts,
+                                subset_counts, size_counts)
 end

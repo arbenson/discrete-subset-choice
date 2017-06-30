@@ -11,26 +11,38 @@ function universal_likelihood_gains_plot(basename::AbstractString, titlename::Ab
         for line in eachline(f)
             exp_data = split(line)
             push!(hotset_sizes, parse(Int64, exp_data[1]))
-            push!(model_lls, parse(Float64, exp_data[2]))
+            fold_lls = [parse(Float64, v) for v in exp_data[2:end]]
+            push!(model_lls, fold_lls)
         end
         close(f)
-        return (hotset_sizes, model_lls)
+        # Get mean and std of ll improvements
+
+        data = read_data("data/$basename.txt")
+        num_choices = length(data.sizes)
+
+        num_folds = length(model_lls[1])
+        num_fold_choices = convert(Int64, floor(num_choices / num_folds)) * ones(Int64, num_folds)
+        num_extra = num_choices - sum(num_fold_choices)
+        num_fold_choices[end] += num_extra
+
+        mean_improvements = []
+        std_improvements = []
+        for lls in model_lls
+            improvements = exp.((lls - model_lls[1]) ./ num_fold_choices)
+            push!(mean_improvements, mean(improvements))
+            push!(std_improvements, std(improvements))            
+        end
+        
+        return (hotset_sizes, mean_improvements, std_improvements)
     end
-    
-    data = read_data("data/$basename.txt")
-    num_choices = length(data.sizes)
 
     PyPlot.pygui(true)
-    
-    (hotset_sizes, model_lls) = read_output("output/$basename-freq.txt")
-    ll0 = model_lls[1]
-    freq_improvements = [exp((ll - ll0) / num_choices) for ll in model_lls]
-    plot(hotset_sizes, freq_improvements, label="Frequency")
-
-    (hotset_sizes, model_lls) = read_output("output/$basename-lift.txt")
-    ll0 = model_lls[1]
-    lift_improvements = [exp((ll - ll0) / num_choices) for ll in model_lls]
-    plot(hotset_sizes, lift_improvements, label="Lift")    
+    (hotset_sizes, mean_improvements, std_improvements) = read_output("output/$basename-freq.txt")
+    plot(hotset_sizes, mean_improvements, label="Frequency")
+    (hotset_sizes, mean_improvements, std_improvements) = read_output("output/$basename-lift.txt")
+    plot(hotset_sizes, mean_improvements, label="Lift")
+    (hotset_sizes, mean_improvements, std_improvements) = read_output("output/$basename-nlift.txt")
+    plot(hotset_sizes, mean_improvements, label="Norm. Lift")        
 
     legend()
     xlabel("Number of corrections")
@@ -76,13 +88,13 @@ function negative_corrections_plot()
 end
 
 function main()
-    universal_likelihood_gains_plot("bakery-5-10", "Bakery")
-    universal_likelihood_gains_plot("walmart-items-5-10", "WalmartItems")
-    universal_likelihood_gains_plot("walmart-depts-5-10", "WalmartDepts")
-    universal_likelihood_gains_plot("kosarak-5-25", "Kosarak")
+    universal_likelihood_gains_plot("bakery-5-25", "Bakery")
+    universal_likelihood_gains_plot("walmart-items-5-25", "WalmartItems")
+    universal_likelihood_gains_plot("walmart-depts-5-25", "WalmartDepts")
     universal_likelihood_gains_plot("lastfm-genres-5-25", "LastfmGenres")
+    universal_likelihood_gains_plot("kosarak-5-25", "Kosarak")
     universal_likelihood_gains_plot("instacart-5-25", "Instacart")    
 end
 
 #main()
-negative_corrections_plot()
+#negative_corrections_plot()

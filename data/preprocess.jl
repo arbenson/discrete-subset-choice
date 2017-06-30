@@ -68,9 +68,9 @@ function apply_cutoffs(dataset::AbstractString, size_cutoff::Int64, freq_cutoff:
 end
 
 function main()
-    apply_cutoffs("bakery.txt", 5, 10)
-    apply_cutoffs("walmart-items.txt", 5, 10)
-    apply_cutoffs("walmart-depts.txt", 5, 10)
+    apply_cutoffs("bakery.txt", 5, 25)
+    apply_cutoffs("walmart-items.txt", 5, 25)
+    apply_cutoffs("walmart-depts.txt", 5, 25)
     apply_cutoffs("kosarak.txt", 5, 25)
     apply_cutoffs("instacart.txt", 5, 25)
     apply_cutoffs("lastfm-genres.txt", 5, 25)    
