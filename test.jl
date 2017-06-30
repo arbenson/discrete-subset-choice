@@ -15,22 +15,68 @@ function test()
 
         p2 = sum([val for (key, val) in model.H[2]])
         g = model.gammas[2]
-        for i = 1:n; for j = i:n; p2 += g * p[i] * p[j]; end; end
+        subset = [0, 0]
+        for i = 1:n
+            subset[1] = i
+            for j = i:n
+                subset[2] = j
+                if !in_hotset(subset, model); p2 += g * p[i] * p[j]; end
+            end
+        end
         @test p2 ≈ 1    
         
         p3 = sum([val for (key, val) in model.H[3]])
         g = model.gammas[3]
-        for i = 1:n; for j = i:n; for k = j:n; p3 += g * p[i] * p[j] * p[k]; end; end; end
+        subset = [0, 0, 0]        
+        for i = 1:n
+            subset[1] = i            
+            for j = i:n
+                subset[2] = j
+                for k = j:n
+                    subset[3] = k
+                    if !in_hotset(subset, model); p3 += g * p[i] * p[j] * p[k]; end
+                end
+            end
+        end
         @test p3 ≈ 1    
         
         p4 = sum([val for (key, val) in model.H[4]])
         g = model.gammas[4]
-        for i = 1:n; for j = i:n; for k = j:n; for l = k:n; p4 += g * p[i] * p[j] * p[k] * p[l]; end; end; end; end
+        subset = [0, 0, 0, 0]
+        for i = 1:n
+            subset[1] = i
+            for j = i:n
+                subset[2] = j
+                for k = j:n
+                    subset[3] = k
+                    for l = k:n
+                        subset[4] = l
+                        if !in_hotset(subset, model); p4 += g * p[i] * p[j] * p[k] * p[l]; end
+                    end
+                end
+            end
+        end
         @test p4 ≈ 1    
         
         p5 = sum([val for (key, val) in model.H[5]])
         g = model.gammas[5]
-        for i = 1:n; for j = i:n; for k = j:n; for l = k:n; for m = l:n; p5 += g * p[i] * p[j] * p[k] * p[l] * p[m]; end; end; end; end; end
+        subset = [0, 0, 0, 0, 0]
+        for i = 1:n
+            subset[1] = i
+            for j = i:n
+                subset[2] = j
+                for k = j:n
+                    subset[3] = k
+                    for l = k:n
+                        subset[4] = l
+                        for m = l:n
+                            subset[5] = m
+                            if !in_hotset(subset, model); p5 += g * p[i] * p[j] * p[k] * p[l] * p[m]; end
+                        end
+                    end
+                end
+            end
+        end
         @test p5 ≈ 1
     end
 
