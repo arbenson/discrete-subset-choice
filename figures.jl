@@ -2,21 +2,21 @@ include("universal.jl")
 
 using PyPlot
 
-function read_output(filename::AbstractString)
-    input_file = open(filename)
-    hotset_sizes = []
-    model_lls = []
-    f = open(filename)
-    for line in eachline(f)
-        exp_data = split(line)
-        push!(hotset_sizes, parse(Int64, exp_data[1]))
-        push!(model_lls, parse(Float64, exp_data[2]))
+function universal_likelihood_gains_plot(basename::AbstractString, titlename::AbstractString)
+    function read_output(filename::AbstractString)
+        input_file = open(filename)
+        hotset_sizes = []
+        model_lls = []
+        f = open(filename)
+        for line in eachline(f)
+            exp_data = split(line)
+            push!(hotset_sizes, parse(Int64, exp_data[1]))
+            push!(model_lls, parse(Float64, exp_data[2]))
+        end
+        close(f)
+        return (hotset_sizes, model_lls)
     end
-    close(f)
-    return (hotset_sizes, model_lls)
-end
-
-function make_plot(basename::AbstractString, titlename::AbstractString)
+    
     data = read_data("data/$basename.txt")
     num_choices = length(data.sizes)
 
@@ -40,13 +40,49 @@ function make_plot(basename::AbstractString, titlename::AbstractString)
     #close()
 end
 
+function negative_corrections_plot()
+    function read_output(basename::AbstractString)
+        f = open("output/$basename-freq-neg-corrections.txt")
+        hotset_sizes = Int64[]
+        num_neg_corrections = Int64[]
+        for line in eachline(f)
+            sz, num = [parse(Int64, v) for v in split(line)]
+            push!(hotset_sizes, sz)
+            push!(num_neg_corrections, num)
+        end
+        return (hotset_sizes, num_neg_corrections)        
+    end
+
+    PyPlot.pygui(true)    
+
+    (hotset_sizes, num_neg_corrections) = read_output("bakery-5-10")
+    semilogx(hotset_sizes, num_neg_corrections ./ hotset_sizes, ls="-", lw=3, label="Bakery")
+    (hotset_sizes, num_neg_corrections) = read_output("walmart-items-5-10")
+    semilogx(hotset_sizes, num_neg_corrections ./ hotset_sizes, ls="--", label="WalmartItems")    
+    (hotset_sizes, num_neg_corrections) = read_output("walmart-depts-5-10") 
+    semilogx(hotset_sizes, num_neg_corrections ./ hotset_sizes, ls=":", lw=3, label="WalmartDepts")
+    (hotset_sizes, num_neg_corrections) = read_output("lastfm-genres-5-25")
+    semilogx(hotset_sizes, num_neg_corrections ./ hotset_sizes, ls="-", lw=1, label="LastfmGenres")
+    (hotset_sizes, num_neg_corrections) = read_output("kosarak-5-25")
+    semilogx(hotset_sizes, num_neg_corrections ./ hotset_sizes, ls="-.", label="Kosarak")
+    (hotset_sizes, num_neg_corrections) = read_output("instacart-5-25")
+    semilogx(hotset_sizes, num_neg_corrections ./ hotset_sizes, ls="-", label="Instacart")    
+
+    legend()
+    xlabel("Number of corrections")
+    ylabel("Fraction negative corrections")
+    show()
+    #title(titlename)
+end
+
 function main()
-    make_plot("bakery-5-10", "Bakery")
-    make_plot("walmart-items-5-10", "WalmartItems")
-    make_plot("walmart-depts-5-10", "WalmartDepts")
-    make_plot("kosarak-5-25", "Kosarak")
-    make_plot("lastfm-genres-5-25", "LastfmGenres")
-    make_plot("instacart-5-25", "Instacart")    
+    universal_likelihood_gains_plot("bakery-5-10", "Bakery")
+    universal_likelihood_gains_plot("walmart-items-5-10", "WalmartItems")
+    universal_likelihood_gains_plot("walmart-depts-5-10", "WalmartDepts")
+    universal_likelihood_gains_plot("kosarak-5-25", "Kosarak")
+    universal_likelihood_gains_plot("lastfm-genres-5-25", "LastfmGenres")
+    universal_likelihood_gains_plot("instacart-5-25", "Instacart")    
 end
 
 #main()
+negative_corrections_plot()

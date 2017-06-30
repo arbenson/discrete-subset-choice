@@ -14,7 +14,7 @@ function subset_counts(data::UniversalChoiceDataset)
 end
 
 function update_by_frequency(data::UniversalChoiceDataset, num_updates::Int64,
-                             output_filename::AbstractString)
+                             basename::AbstractString)
     counts = [(count, choice_tup) for (choice_tup, count) in subset_counts(data)]
     sort!(counts, rev=true)
     choices_to_add = [collect(choice_tup) for (count, choice_tup) in counts[1:num_updates]]
@@ -22,22 +22,41 @@ function update_by_frequency(data::UniversalChoiceDataset, num_updates::Int64,
     model = initialize_model(data)
     log_likelihoods = Float64[]
     push!(log_likelihoods, log_likelihood(data, model))
+    num_negative_corrections = Int64[]
 
     for (i, choice) in enumerate(choices_to_add)
         println(@sprintf("iteration %d of %d", i, num_updates))
         update_hotset_and_model(data, model, choice)
         ll = log_likelihood(data, model)
         push!(log_likelihoods, ll)
+
+        # Get negative corrections
+        count = 0
+        for hotset in model.H
+            for (subset, val) in hotset
+                separable_prob = prod([model.probs[item] for item in subset])
+                gamma = model.gammas[length(subset)]
+                correction = val - gamma * separable_prob
+                if correction < 0; count += 1; end
+            end
+        end
+        push!(num_negative_corrections, count)
     end
 
-    output = open(output_filename, "w")
+    output = open("output/$basename-freq.txt", "w")
     for (i, ll) in enumerate(log_likelihoods)
         write(output, @sprintf("%d %f\n", i - 1, ll))
+    end
+    close(output)
+
+    output = open("output/$basename-freq-neg-corrections.txt", "w")
+    for (i, num) in enumerate(num_negative_corrections)
+        write(output, @sprintf("%d %d\n", i, num))
     end
 end
 
 function update_by_lift(data::UniversalChoiceDataset, num_updates::Int64,
-                        output_filename::AbstractString)
+                        basename::AbstractString)
     # individual item counts
     item_counts = zeros(Int64, maximum(data.choices))
     for (size, choice) in iter_choices(data)
@@ -62,7 +81,7 @@ function update_by_lift(data::UniversalChoiceDataset, num_updates::Int64,
         push!(log_likelihoods, ll)
     end
 
-    output = open(output_filename, "w")
+    output = open("output/$basename-lift.txt", "w")
     for (i, ll) in enumerate(log_likelihoods)
         write(output, @sprintf("%d %f\n", i - 1, ll))
     end
@@ -75,16 +94,16 @@ function frequency_experiments()
         basename = split(split(dataset_file, "/")[end], ".")[1]
         num_items = length(unique(data.choices))
         num_updates = min(num_items, 1000)
-        update_by_frequency(data, num_updates, "output/$basename-freq.txt")
-        #update_by_lift(data, num_updates, "output/$basename-lift.txt")              
+        update_by_frequency(data, num_updates, basename)
+        #update_by_lift(data, num_updates, basename)
     end
 
-    run_experiment("data/bakery-5-10.txt")
+    #run_experiment("data/bakery-5-10.txt")
     #run_experiment("data/walmart-depts-5-10.txt")
     #run_experiment("data/walmart-items-5-10.txt")
     #run_experiment("data/kosarak-5-25.txt")
     #run_experiment("data/lastfm-genres-5-25.txt")
-    #run_experiment("data/instacart-5-25.txt")
+    run_experiment("data/instacart-5-25.txt")
 end
 
 frequency_experiments()
