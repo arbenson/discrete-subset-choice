@@ -96,7 +96,7 @@ function universal_improvements(data::UniversalChoiceDataset, num_updates::Int64
         training_data = UniversalChoiceDataset(training_sizes, training_choices)
         test_data = UniversalChoiceDataset(test_sizes, test_choices)
         model = initialize_model(training_data)
-        log_likelihoods[1, fold] = log_likelihood(test_data, model)
+        log_likelihoods[1, fold] = log_likelihood(model, test_data)
 
         item_counts = zeros(Int64, maximum(data.choices))
         for (size, choice) in iter_choices(training_data)
@@ -111,7 +111,7 @@ function universal_improvements(data::UniversalChoiceDataset, num_updates::Int64
             for (i, choice) in enumerate(choices_to_add)
                 println(@sprintf("iteration %d of %d", i, num_updates))
                 add_to_hotset(model, choice)
-                log_likelihoods[i + 1, fold] = log_likelihood(test_data, model)
+                log_likelihoods[i + 1, fold] = log_likelihood(model, test_data)
             end
         elseif update_type == "nl"
             # normalized lift-based updates
@@ -125,7 +125,7 @@ function universal_improvements(data::UniversalChoiceDataset, num_updates::Int64
             for (i, choice) in enumerate(choices_to_add)
                 println(@sprintf("iteration %d of %d", i, num_updates))
                 add_to_hotset(model, choice)
-                log_likelihoods[i + 1, fold] = log_likelihood(test_data, model)
+                log_likelihoods[i + 1, fold] = log_likelihood(model, test_data)
             end
         elseif update_type == "l"
             # Lift-based updates
@@ -139,7 +139,7 @@ function universal_improvements(data::UniversalChoiceDataset, num_updates::Int64
             for (i, choice) in enumerate(choices_to_add)
                 println(@sprintf("iteration %d of %d", i, num_updates))
                 add_to_hotset(model, choice)
-                log_likelihoods[i + 1, fold] = log_likelihood(test_data, model)
+                log_likelihoods[i + 1, fold] = log_likelihood(model, test_data)
             end
         elseif update_type == "lev"
             # Leverage-based updates
@@ -153,7 +153,7 @@ function universal_improvements(data::UniversalChoiceDataset, num_updates::Int64
             for (i, choice) in enumerate(choices_to_add)
                 println(@sprintf("iteration %d of %d", i, num_updates))
                 add_to_hotset(model, choice)
-                log_likelihoods[i + 1, fold] = log_likelihood(test_data, model)
+                log_likelihoods[i + 1, fold] = log_likelihood(model, test_data)
             end
         elseif update_type == "g"
             # Greedy-based updates
@@ -161,11 +161,11 @@ function universal_improvements(data::UniversalChoiceDataset, num_updates::Int64
             for i = 1:num_updates
                 println(@sprintf("iteration %d of %d", i, num_updates))                
                 best_update = ()
-                best_ll = log_likelihood(training_data, model)
+                best_ll = log_likelihood(model, training_data)
                 for subset in considered_sets
-                    if !in_hotset(subset, model)
+                    if !in_hotset(model, subset)
                         add_to_hotset(model, subset)
-                        ll = log_likelihood(training_data, model)
+                        ll = log_likelihood(model, training_data)
                         if ll > best_ll || length(best_update) == 0
                             best_ll = ll
                             best_update = subset
@@ -174,7 +174,7 @@ function universal_improvements(data::UniversalChoiceDataset, num_updates::Int64
                     end
                 end
                 add_to_hotset(model, best_update)
-                log_likelihoods[i + 1, fold] = log_likelihood(test_data, model)
+                log_likelihoods[i + 1, fold] = log_likelihood(model, test_data)
             end
         else
             error("Unknown update type")
