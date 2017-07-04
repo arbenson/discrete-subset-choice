@@ -30,6 +30,35 @@ function negative_corrections(data::UniversalChoiceDataset, num_updates::Int64,
     end
 end
 
+function biggest_corrections(data::UniversalChoiceDataset, num_updates::Int64,
+                             basename::AbstractString)
+    counts = [(count, choice_tup) for (choice_tup, count) in get_subset_counts(data)]
+    sort!(counts, rev=true)
+    choices_to_add = [collect(choice_tup) for (count, choice_tup) in counts[1:num_updates]]
+    model = initialize_model(data)
+    num_negative_corrections = Int64[]
+    for choice in choices_to_add; add_to_hotset(model, choice); end
+
+    data = []
+    for hotset in model.H
+        for (subset, val) in hotset
+            separable_prob = prod([model.probs[item] for item in subset])
+            gamma = model.gammas[length(subset)]
+            correction = val - gamma * separable_prob
+            push!(data, (correction, subset))
+        end
+    end
+
+    sort!(data)
+    output = open("output/$basename-biggest-corrections.txt", "w")
+    for i = 1:5
+        write(output, @sprintf("%d:\t%s\t%f\n", i, join(data[i][2], " "), data[i][1]))
+    end
+    for i = 1:5
+        ind = length(data) - i + 1
+        write(output, @sprintf("%d:\t%s\t%f\n", i, join(data[ind][2], " "), data[ind][1]))
+    end
+end
 
 function universal_improvements(data::UniversalChoiceDataset, num_updates::Int64,
                                 basename::AbstractString, update_type::AbstractString)
@@ -175,14 +204,15 @@ function universal_improvement_experiments()
         #universal_improvements(data, num_updates, basename, "l")
         #universal_improvements(data, num_updates, basename, "lev")
         #universal_improvements(data, num_updates, basename, "g")
-        negative_corrections(data, num_updates, basename)
+        #negative_corrections(data, num_updates, basename)
+        biggest_corrections(data, num_updates, basename)
     end
 
-    run_universal_improvement_experiment("data/bakery-5-25.txt")
-    run_universal_improvement_experiment("data/walmart-depts-5-25.txt")
-    run_universal_improvement_experiment("data/walmart-items-5-25.txt")
-    run_universal_improvement_experiment("data/lastfm-genres-5-25.txt")
-    run_universal_improvement_experiment("data/kosarak-5-25.txt")
+    #run_universal_improvement_experiment("data/bakery-5-25.txt")
+    #run_universal_improvement_experiment("data/walmart-depts-5-25.txt")
+    #run_universal_improvement_experiment("data/walmart-items-5-25.txt")
+    #run_universal_improvement_experiment("data/lastfm-genres-5-25.txt")
+    #run_universal_improvement_experiment("data/kosarak-5-25.txt")
     run_universal_improvement_experiment("data/instacart-5-25.txt")
 end
 
