@@ -63,17 +63,18 @@ function apply_cutoffs(dataset::AbstractString, size_cutoff::Int64, freq_cutoff:
     basename = split(dataset, ".")[1]
     output = open("$basename-$size_cutoff-$freq_cutoff.txt", "w")
     for (size, choice) in iter_choices(data)
+        sort!(choice)
         write(output, string(join(choice, ' '), "\n"))
     end
 end
 
 function main()
-    #apply_cutoffs("bakery.txt", 5, 25)
-    #apply_cutoffs("walmart-items.txt", 5, 25)
-    #apply_cutoffs("walmart-depts.txt", 5, 25)
-    #apply_cutoffs("kosarak.txt", 5, 25)
+    apply_cutoffs("bakery.txt", 5, 25)
+    apply_cutoffs("walmart-items.txt", 5, 25)
+    apply_cutoffs("walmart-depts.txt", 5, 25)
+    apply_cutoffs("kosarak.txt", 5, 25)
     apply_cutoffs("instacart.txt", 5, 25)
-    #apply_cutoffs("lastfm-genres.txt", 5, 25)    
+    apply_cutoffs("lastfm-genres.txt", 5, 25)    
 end
 
 main()

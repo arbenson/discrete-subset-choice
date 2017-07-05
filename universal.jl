@@ -58,14 +58,13 @@ end
 
 # iterator over choices
 #
-# This is only syntactic sugar.  It pre-allocates the entire size of the output.
+# This is only syntactic sugar.  It allocates the entire size of the output.
 # Unfortunately, a "real" iterator with a Channel is too slow.
 function iter_choices(data::UniversalChoiceDataset)
     curr_ind = 1
     choice_vec = Vector{Vector{Int64}}()
     for size in data.sizes
         choice = data.choices[curr_ind:(curr_ind + size - 1)]
-        sort!(choice)
         push!(choice_vec, choice)
         curr_ind += size
     end
