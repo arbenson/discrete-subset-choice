@@ -1,4 +1,6 @@
+using StatsBase
 using Base.Threads
+using Optim
 
 # Represent a variable choice dataset as a vector of slate sizes, a vector of
 # all slates, a vector of choice set sizes, and a vector of all choices.
@@ -30,16 +32,15 @@ function read_data(dataset::AbstractString)
     choice_sizes = Int64[]    
     choices = Int64[]
     for line in eachline(f)
-        info = split(line, ";")
-        slate = [parse(Int64, v) for v in split(info[1])]
-        choice = [parse(Int64, v) for v in split(info[2])]
+        slate_choice = split(line, ";")
+        slate = [parse(Int64, v) for v in split(slate_choice[1])]
+        choice = [parse(Int64, v) for v in split(slate_choice[2])]
         push!(slate_sizes, length(slate))
         append!(slates, slate)
         push!(choice_sizes, length(choice))
         append!(choices, choice)
     end
-    return VariableChoiceDataset(slate_sizes, slates,
-                                 choice_sizes, choices)
+    return VariableChoiceDataset(slate_sizes, slates, choice_sizes, choices)
 end
 
 # iterator over choices
@@ -175,5 +176,51 @@ function add_to_hotset(model::VariableChoiceModel, choice_to_add::Vector{Int64})
     model.H[lc][choice_tup] = 0.0
 end
 
+function learn_size_probs(data::VariableChoiceDataset)
+    function log_likelihood(x::Vector{Float64})
+        ll = 0.0
+        for (slate_size, choice_size) in zip(data.slate_sizes, data.choice_sizes)
+            ll -= x[choice_size]
+            total = 0.0
+            max_choice_size = min(slate_size - 1, length(x))            
+            for i in 1:max_choice_size; total += exp(x[i]); end
+            ll += log(total)
+        end
+        return ll
+    end
+
+    function gradient!(grad::Vector{Float64}, x::Vector{Float64})
+        # Assume utility of first element is 0
+        for i = 1:length(x); grad[i] = 0.0; end
+        for (slate_size, choice_size) in zip(data.slate_sizes, data.choice_sizes)
+            if choice_size > 1; grad[choice_size] -= 1; end
+            total = 1.0
+            max_choice_size = min(slate_size - 1, length(x))
+            for i in 2:max_choice_size; total += exp(x[i]); end
+            for i in 2:max_choice_size; grad[i] += exp(x[i]) / total; end
+        end
+        g2 = norm(grad, 2)
+        for i = 1:length(x); grad[i] /= g2; end
+    end
+
+    res = optimize(log_likelihood, gradient!, zeros(Float64, maximum(data.choice_sizes)), BFGS())
+    return exp.(res.minimizer) / sum(exp.(res.minimizer))
+end
+
+function learn_utilities(data::VariableChoiceDataset)
+end
+
 function initialize_model(data::VariableChoiceDataset)
 end
+
+function main()
+    data = read_data("data/yc-items-5-5.txt")
+    z = learn_size_probs(data)
+    @show z
+
+    data = read_data("data/yc-cats-5-5.txt")
+    z = learn_size_probs(data)
+    @show z    
+end
+
+#main()
