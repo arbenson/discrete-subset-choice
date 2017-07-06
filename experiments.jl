@@ -9,7 +9,7 @@ function negative_corrections(data::UniversalChoiceDataset, num_updates::Int64,
     num_negative_corrections = Int64[]
     for (i, choice) in enumerate(choices_to_add)
         println(@sprintf("iteration %d of %d", i, num_updates))
-        add_to_hotset(model, choice)
+        add_to_hotset!(model, choice)
 
         # Get negative corrections
         count = 0
@@ -37,7 +37,7 @@ function biggest_corrections(data::UniversalChoiceDataset, num_updates::Int64,
     choices_to_add = [collect(choice_tup) for (count, choice_tup) in counts[1:num_updates]]
     model = initialize_model(data)
     num_negative_corrections = Int64[]
-    for choice in choices_to_add; add_to_hotset(model, choice); end
+    for choice in choices_to_add; add_to_hotset!(model, choice); end
 
     data = []
     for hotset in model.H
@@ -110,7 +110,7 @@ function universal_improvements(data::UniversalChoiceDataset, num_updates::Int64
             choices_to_add = [collect(choice_tup) for (count, choice_tup) in counts[1:num_updates]]
             for (i, choice) in enumerate(choices_to_add)
                 println(@sprintf("iteration %d of %d", i, num_updates))
-                add_to_hotset(model, choice)
+                add_to_hotset!(model, choice)
                 log_likelihoods[i + 1, fold] = log_likelihood(model, test_data)
             end
         elseif update_type == "nl"
@@ -124,7 +124,7 @@ function universal_improvements(data::UniversalChoiceDataset, num_updates::Int64
             choices_to_add = [collect(choice_tup) for (_, choice_tup) in lifts[1:num_updates]]
             for (i, choice) in enumerate(choices_to_add)
                 println(@sprintf("iteration %d of %d", i, num_updates))
-                add_to_hotset(model, choice)
+                add_to_hotset!(model, choice)
                 log_likelihoods[i + 1, fold] = log_likelihood(model, test_data)
             end
         elseif update_type == "l"
@@ -138,7 +138,7 @@ function universal_improvements(data::UniversalChoiceDataset, num_updates::Int64
             choices_to_add = [collect(choice_tup) for (_, choice_tup) in lifts[1:num_updates]]
             for (i, choice) in enumerate(choices_to_add)
                 println(@sprintf("iteration %d of %d", i, num_updates))
-                add_to_hotset(model, choice)
+                add_to_hotset!(model, choice)
                 log_likelihoods[i + 1, fold] = log_likelihood(model, test_data)
             end
         elseif update_type == "lev"
@@ -152,7 +152,7 @@ function universal_improvements(data::UniversalChoiceDataset, num_updates::Int64
             choices_to_add = [collect(choice_tup) for (_, choice_tup) in levs[1:num_updates]]
             for (i, choice) in enumerate(choices_to_add)
                 println(@sprintf("iteration %d of %d", i, num_updates))
-                add_to_hotset(model, choice)
+                add_to_hotset!(model, choice)
                 log_likelihoods[i + 1, fold] = log_likelihood(model, test_data)
             end
         elseif update_type == "g"
@@ -164,16 +164,16 @@ function universal_improvements(data::UniversalChoiceDataset, num_updates::Int64
                 best_ll = log_likelihood(model, training_data)
                 for subset in considered_sets
                     if !in_hotset(model, subset)
-                        add_to_hotset(model, subset)
+                        add_to_hotset!(model, subset)
                         ll = log_likelihood(model, training_data)
                         if ll > best_ll || length(best_update) == 0
                             best_ll = ll
                             best_update = subset
                         end
-                        remove_from_hotset(model, subset)
+                        remove_from_hotset!(model, subset)
                     end
                 end
-                add_to_hotset(model, best_update)
+                add_to_hotset!(model, best_update)
                 log_likelihoods[i + 1, fold] = log_likelihood(model, test_data)
             end
         else

@@ -161,7 +161,7 @@ function normalization_values(max_size::Int64, H::Vector{Dict{NTuple,Float64}},
     return gammas
 end
 
-function add_to_hotset(model::UniversalChoiceModel, choice_to_add::Vector{Int64})
+function add_to_hotset!(model::UniversalChoiceModel, choice_to_add::Vector{Int64})
     if in_hotset(model, choice_to_add); error("Choice already in hot set."); end
     lc = length(choice_to_add)
     choice_tup = NTuple{lc, Int64}(choice_to_add)
@@ -179,7 +179,7 @@ function add_to_hotset(model::UniversalChoiceModel, choice_to_add::Vector{Int64}
     model.gammas = normalization_values(length(model.gammas), model.H, model.probs)
 end
 
-function remove_from_hotset(model::UniversalChoiceModel, choice_to_rm::Vector{Int64})
+function remove_from_hotset!(model::UniversalChoiceModel, choice_to_rm::Vector{Int64})
     if !in_hotset(model, choice_to_rm); error("Choice not in hot set."); end
     lc = length(choice_to_rm)
     choice_tup = NTuple{lc, Int64}(choice_to_rm)
