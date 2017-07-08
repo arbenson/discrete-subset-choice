@@ -47,7 +47,7 @@ end
 function iter_slates_choices(data::VariableChoiceDataset)
     curr_slate_ind = 1
     curr_choice_ind = 1
-    slate_vec = Vector{Vector{Int64}}()    
+    slate_vec = Vector{Vector{Int64}}()
     choice_vec = Vector{Vector{Int64}}()
     for (slate_size, choice_size) in zip(data.slate_sizes, data.choice_sizes)
         slate = data.slates[curr_slate_ind:(curr_slate_ind + slate_size - 1)]
@@ -62,30 +62,22 @@ function iter_slates_choices(data::VariableChoiceDataset)
     return zip(data.slate_sizes, slate_vec, data.choice_sizes, choice_vec)
 end
 
-function in_hotset(model::VariableChoiceModel, choice::Vector{Int64})
-    choice_size = length(choice)
-    key = NTuple{choice_size, Int64}(choice)
-    return haskey(model.H[choice_size], key)
-end
-
-function hotset_utility(model::VariableChoiceModel, choice::Vector{Int64})
-    choice_size = length(choice)
-    key = NTuple{choice_size, Int64}(choice)
-    return model.H[choice_size][key]
-end
+vec2ntuple(vec::Vector{Int64}) = NTuple{length(vec), Int64}(vec)
+in_hotset(model::VariableChoiceModel, choice::Vector{Int64}) =
+    haskey(model.H[length(choice)], vec2ntuple(choice))
+hotset_utility(model::VariableChoiceModel, choice::Vector{Int64}) =
+    model.H[length(choice)][vec2ntuple(choice)]
 
 function hotset_val(model::VariableChoiceModel, choice::Vector{Int64})
     choice_size = length(choice)
-    key = NTuple{choice_size, Int64}(choice)
+    key = vec2ntuple(choice)
     if !haskey(model.H[choice_size], key); return 0.0; end
     return model.H[choice_size][key]
 end
 
-function set_hotset_value!(model::VariableChoiceModel, choice_to_add::Vector{Int64},
-                           value::Float64)
-    lc = length(choice_to_add)
-    choice_tup = NTuple{lc, Int64}(choice_to_add)
-    model.H[lc][choice_tup] = value
+function set_hotset_value!(model::VariableChoiceModel, choice::Vector{Int64},
+                           val::Float64)
+    model.H[length(choice)][vec2ntuple(choice)] = val
 end
 
 function add_to_hotset!(model::VariableChoiceModel, choice_to_add::Vector{Int64})
@@ -112,7 +104,7 @@ function expsum_util2(model::VariableChoiceModel, slate::Vector{Int64})
         subset[1] = i
         si = model.utilities[i]
         for ind_j = ind_i:ns
-            j = slate[ind_j]            
+            j = slate[ind_j]
             subset[2] = j
             sj = si + model.utilities[j] + hotset_val(model, subset)
             total += exp(sj)
@@ -153,7 +145,7 @@ function expsum_util4(model::VariableChoiceModel, slate::Vector{Int64})
         subset[1] = i
         si = model.utilities[i]
         for ind_j = ind_i:ns
-            j = slate[ind_j]            
+            j = slate[ind_j]
             subset[2] = j
             sj = si + model.utilities[j]
             for ind_k = ind_j:ns
@@ -205,9 +197,9 @@ function expsum_util5(model::VariableChoiceModel, slate::Vector{Int64})
     return total
 end
 
-function gradient_update1!(model::VariableChoiceModel, slate::Vector{Int64}, grad::Vector{Float64})
+function gradient_update1!(model::VariableChoiceModel, slate::Vector{Int64},
+                           grad::Vector{Float64})
     sum = expsum_util1(model, slate)
-    n_items = length(model.utilities)
     ns = length(slate)
     for ind_i = 1:ns
         i = slate[ind_i]
@@ -215,9 +207,9 @@ function gradient_update1!(model::VariableChoiceModel, slate::Vector{Int64}, gra
     end
 end
 
-function gradient_update2!(model::VariableChoiceModel, slate::Vector{Int64}, grad::Vector{Float64}, hotset_inds::Dict{NTuple, Int64})
+function gradient_update2!(model::VariableChoiceModel, slate::Vector{Int64},
+                           grad::Vector{Float64}, hotset_inds::Dict{NTuple, Int64})
     sum = expsum_util2(model, slate)    
-    n_items = length(model.utilities)
     ns = length(slate)
     subset = [0, 0]
     for ind_i = 1:ns
@@ -228,19 +220,17 @@ function gradient_update2!(model::VariableChoiceModel, slate::Vector{Int64}, gra
             j = slate[ind_j]            
             subset[2] = j
             sj = si + model.utilities[j] + hotset_val(model, subset)
-            grad[i] += exp(sj) / sum
-            grad[j] += exp(sj) / sum
+            grad[subset] += exp(sj) / sum
             if in_hotset(model, subset)
-                tup = NTuple{length(subset), Int64}(subset)
-                grad[hotset_inds[tup]] += exp(sj) / sum
+                grad[hotset_inds[vec2ntuple(subset)]] += exp(sj) / sum
             end
         end
     end
 end
 
-function gradient_update3!(model::VariableChoiceModel, slate::Vector{Int64}, grad::Vector{Float64}, hotset_inds::Dict{NTuple, Int64})
+function gradient_update3!(model::VariableChoiceModel, slate::Vector{Int64},
+                           grad::Vector{Float64}, hotset_inds::Dict{NTuple, Int64})
     sum = expsum_util3(model, slate)    
-    n_items = length(model.utilities)
     ns = length(slate)
     subset = [0, 0, 0]
     for ind_i = 1:ns
@@ -255,21 +245,18 @@ function gradient_update3!(model::VariableChoiceModel, slate::Vector{Int64}, gra
                 k = slate[ind_k]
                 subset[3] = k
                 sk = sj + model.utilities[k] + hotset_val(model, subset)
-                grad[i] += exp(sk) / sum
-                grad[j] += exp(sk) / sum
-                grad[k] += exp(sk) / sum
+                grad[subset] += exp(sk) / sum
                 if in_hotset(model, subset)
-                    tup = NTuple{length(subset), Int64}(subset)
-                    grad[hotset_inds[tup]] += exp(sk) / sum
+                    grad[hotset_inds[vec2ntuple(subset)]] += exp(sk) / sum
                 end
             end
         end
     end
 end
 
-function gradient_update4!(model::VariableChoiceModel, slate::Vector{Int64}, grad::Vector{Float64}, hotset_inds::Dict{NTuple, Int64})
+function gradient_update4!(model::VariableChoiceModel, slate::Vector{Int64},
+                           grad::Vector{Float64}, hotset_inds::Dict{NTuple, Int64})
     sum = expsum_util4(model, slate)    
-    n_items = length(model.utilities)
     ns = length(slate)
     subset = [0, 0, 0, 0]
     for ind_i = 1:ns
@@ -288,13 +275,9 @@ function gradient_update4!(model::VariableChoiceModel, slate::Vector{Int64}, gra
                     l = slate[ind_l]                    
                     subset[4] = l
                     sl = sk + model.utilities[l] + hotset_val(model, subset)
-                    grad[i] += exp(sl) / sum
-                    grad[j] += exp(sl) / sum
-                    grad[k] += exp(sl) / sum
-                    grad[l] += exp(sl) / sum
+                    grad[subset] += exp(sl) / sum
                     if in_hotset(model, subset)
-                        tup = NTuple{length(subset), Int64}(subset)
-                        grad[hotset_inds[tup]] += exp(sl) / sum
+                        grad[hotset_inds[vec2ntuple(subset)]] += exp(sl) / sum
                     end
                 end
             end
@@ -302,9 +285,9 @@ function gradient_update4!(model::VariableChoiceModel, slate::Vector{Int64}, gra
     end
 end
 
-function gradient_update5!(model::VariableChoiceModel, slate::Vector{Int64}, grad::Vector{Float64}, hotset_inds::Dict{NTuple, Int64})
+function gradient_update5!(model::VariableChoiceModel, slate::Vector{Int64},
+                           grad::Vector{Float64}, hotset_inds::Dict{NTuple, Int64})
     sum = expsum_util5(model, slate)    
-    n_items = length(model.utilities)
     ns = length(slate)
     subset = [0, 0, 0, 0, 0]
     for ind_i = 1:ns
@@ -327,14 +310,9 @@ function gradient_update5!(model::VariableChoiceModel, slate::Vector{Int64}, gra
                         m = slate[ind_m]
                         subset[5] = m
                         sm = sl + model.utilities[m] + hotset_val(model, subset)
-                        grad[i] += exp(sm) / sum
-                        grad[j] += exp(sm) / sum
-                        grad[k] += exp(sm) / sum
-                        grad[l] += exp(sm) / sum
-                        grad[m] += exp(sm) / sum
+                        grad[subset] += exp(sm) / sum
                         if in_hotset(model, subset)
-                            tup = NTuple{length(subset), Int64}(subset)
-                            grad[hotset_inds[tup]] += exp(sm) / sum
+                            grad[hotset_inds[vec2ntuple(subset)]] += exp(sm) / sum
                         end
                     end
                 end
@@ -396,7 +374,7 @@ function learn_utilities!(model::VariableChoiceModel, data::VariableChoiceDatase
             hotset_inds[tup] = n_items + length(hotset_tups)
         end
     end
-
+    
     function update_model(x::Vector{Float64})
         # Vector x contains item utilities and hotset utilities
         model.utilities = copy(x[1:n_items])
@@ -407,11 +385,9 @@ function learn_utilities!(model::VariableChoiceModel, data::VariableChoiceDatase
 
     function neg_log_likelihood!(x::Vector{Float64})
         update_model(x)
-        ll = -log_likelihood(model, data)
-        @show ll
-        return ll
+        return -log_likelihood(model, data)
     end
-
+    
     function gradient!(grad::Vector{Float64}, x::Vector{Float64})
         for i = 1:length(x); grad[i] = 0.0; end
         slate_inds = cumsum(data.slate_sizes) + 1
@@ -425,8 +401,7 @@ function learn_utilities!(model::VariableChoiceModel, data::VariableChoiceDatase
             size = length(choice)
             for item in choice; grad[item] -= 1; end
             if in_hotset(model, choice)
-                choice_tup = NTuple{size, Int64}(choice)
-                grad[hotset_inds[choice_tup]] -= 1
+                grad[hotset_inds[vec2ntuple(choice)]] -= 1
             end
             update_gradient_from_slate!(model, grad, slate, size, hotset_inds)            
         end
@@ -436,21 +411,23 @@ function learn_utilities!(model::VariableChoiceModel, data::VariableChoiceDatase
     end
 
     nvars = length(model.utilities) + length(hotset_tups)
-    res = optimize(neg_log_likelihood!, gradient!, zeros(Float64, nvars), BFGS())
+    options = Optim.Options(f_tol=1e-6)
+    res = optimize(neg_log_likelihood!, gradient!, zeros(Float64, nvars),
+                   LBFGS(), options)
     update_model(res.minimizer)
 end
 
 function learn_size_probs!(model::VariableChoiceModel, data::VariableChoiceDataset)
     function neg_log_likelihood(x::Vector{Float64})
-        ll = 0.0
+        nll = 0.0
         for (slate_size, choice_size) in zip(data.slate_sizes, data.choice_sizes)
-            ll -= x[choice_size]
+            nll -= x[choice_size]
             total = 0.0
             max_choice_size = min(slate_size - 1, length(x))            
             for i in 1:max_choice_size; total += exp(x[i]); end
-            ll += log(total)
+            nll += log(total)
         end
-        return ll
+        return nll
     end
 
     function gradient!(grad::Vector{Float64}, x::Vector{Float64})
@@ -460,14 +437,16 @@ function learn_size_probs!(model::VariableChoiceModel, data::VariableChoiceDatas
             if choice_size > 1; grad[choice_size] -= 1; end
             total = 1.0
             max_choice_size = min(slate_size - 1, length(x))
-            for i in 2:max_choice_size; total += exp(x[i]); end
-            for i in 2:max_choice_size; grad[i] += exp(x[i]) / total; end
+            for i in 2:max_choice_size; total   += exp(x[i]); end
+            grad[2:max_choice_size] += exp.(x[2:max_choice_size]) / total
         end
         g2 = norm(grad, 2)
         for i = 1:length(x); grad[i] /= g2; end
     end
 
-    res = optimize(neg_log_likelihood, gradient!, zeros(Float64, maximum(data.choice_sizes)), BFGS())
+    options = Optim.Options(f_tol=1e-4)    
+    res = optimize(neg_log_likelihood, gradient!,
+                   zeros(Float64, maximum(data.choice_sizes)), LBFGS(), options)
     model.z = exp.(res.minimizer) / sum(exp.(res.minimizer))
 end
 
