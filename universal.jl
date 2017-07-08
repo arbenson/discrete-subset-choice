@@ -1,3 +1,4 @@
+include("common.jl")
 using StatsBase
 using Base.Threads
 
@@ -34,7 +35,7 @@ function get_subset_counts(data::UniversalChoiceDataset)
     # Get the counts
     counts = Dict{NTuple, Int64}()
     for (size, choice) in iter_choices(data)
-        choice_tup = NTuple{length(choice), Int64}(choice)
+        choice_tup = vec2ntuple(choice)
         if length(choice) > 1
             if !haskey(counts, choice_tup); counts[choice_tup] = 0; end
             counts[choice_tup] += 1
@@ -72,23 +73,16 @@ function iter_choices(data::UniversalChoiceDataset)
     return zip(data.sizes, choice_vec)
 end
 
-function in_hotset(model::UniversalChoiceModel, choice::Vector{Int64})
-    choice_size = length(choice)
-    key = NTuple{choice_size, Int64}(choice)
-    return haskey(model.H[choice_size], key)
-end
+in_hotset(model::UniversalChoiceModel, choice::Vector{Int64}) =
+    haskey(model.H[length(choice)], vec2ntuple(choice))
 
-function hotset_prob(model::UniversalChoiceModel, choice::Vector{Int64})
-    choice_size = length(choice)
-    key = NTuple{choice_size, Int64}(choice)
-    return model.H[choice_size][key]
-end
+hotset_prob(model::UniversalChoiceModel, choice::Vector{Int64}) =
+    model.H[length(choice)][vec2ntuple(choice)]
 
 function log_likelihood(model::UniversalChoiceModel, data::UniversalChoiceDataset)
     ns = length(data.sizes)
     ll = zeros(Float64, ns)
-    inds = cumsum(data.sizes) + 1
-    unshift!(inds, 1)
+    inds = index_points(data.sizes)
     Threads.@threads for i = 1:ns
         choice = data.choices[inds[i]:(inds[i + 1] - 1)]
         size = data.sizes[i]
@@ -164,7 +158,7 @@ end
 function add_to_hotset!(model::UniversalChoiceModel, choice_to_add::Vector{Int64})
     if in_hotset(model, choice_to_add); error("Choice already in hot set."); end
     lc = length(choice_to_add)
-    choice_tup = NTuple{lc, Int64}(choice_to_add)
+    choice_tup = vec2tuple(choice_to_add)
 
     # Update hotset probability
     choice_count = model.subset_counts[choice_tup]
@@ -181,11 +175,10 @@ end
 
 function remove_from_hotset!(model::UniversalChoiceModel, choice_to_rm::Vector{Int64})
     if !in_hotset(model, choice_to_rm); error("Choice not in hot set."); end
-    lc = length(choice_to_rm)
-    choice_tup = NTuple{lc, Int64}(choice_to_rm)
 
     # Update hotset probability
-    delete!(model.H[lc], choice_tup)
+    choice_tup = vec2ntuple(choice_to_rm)
+    delete!(model.H[length(choice_to_rm)], choice_tup)
 
     # Update item counts and probability
     choice_count = model.subset_counts[choice_tup]

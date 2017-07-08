@@ -1,3 +1,4 @@
+include("common.jl")
 using StatsBase
 using Base.Threads
 using Optim
@@ -62,7 +63,6 @@ function iter_slates_choices(data::VariableChoiceDataset)
     return zip(data.slate_sizes, slate_vec, data.choice_sizes, choice_vec)
 end
 
-vec2ntuple(vec::Vector{Int64}) = NTuple{length(vec), Int64}(vec)
 in_hotset(model::VariableChoiceModel, choice::Vector{Int64}) =
     haskey(model.H[length(choice)], vec2ntuple(choice))
 hotset_utility(model::VariableChoiceModel, choice::Vector{Int64}) =
@@ -348,10 +348,8 @@ end
 function log_likelihood(model::VariableChoiceModel, data::VariableChoiceDataset)
     ns = length(data.slate_sizes)
     ll = zeros(Float64, ns)
-    slate_inds = cumsum(data.slate_sizes) + 1
-    unshift!(slate_inds, 1)
-    choice_inds = cumsum(data.choice_sizes) + 1
-    unshift!(choice_inds, 1)
+    slate_inds = index_points(data.slate_sizes)
+    choice_inds = index_points(data.choice_sizes)
     Threads.@threads for i = 1:ns    
         slate = data.slates[slate_inds[i]:(slate_inds[i + 1] - 1)]        
         choice = data.choices[choice_inds[i]:(choice_inds[i + 1] - 1)]
@@ -403,7 +401,7 @@ function learn_utilities!(model::VariableChoiceModel, data::VariableChoiceDatase
             if in_hotset(model, choice)
                 grad[hotset_inds[vec2ntuple(choice)]] -= 1
             end
-            update_gradient_from_slate!(model, grad, slate, size, hotset_inds)            
+            update_gradient_from_slate!(model, grad, slate, size, hotset_inds) 
         end
         g2 = norm(grad, 2)
         for i = 1:length(x); grad[i] /= g2; end        
