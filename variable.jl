@@ -25,6 +25,21 @@ mutable struct VariableChoiceModel
     H::Vector{Dict{NTuple,Float64}}
 end
 
+function get_subset_counts(data::VariableChoiceDataset)
+    # Get the counts
+    counts = Dict{NTuple, Int64}()
+    choice_inds = index_points(data.choice_sizes)
+    for i = 1:length(data.choice_sizes)
+        choice = data.choices[choice_inds[i]:(choice_inds[i + 1] - 1)]
+        choice_tup = vec2ntuple(choice)
+        if length(choice) > 1
+            if !haskey(counts, choice_tup); counts[choice_tup] = 0; end
+            counts[choice_tup] += 1
+        end
+    end
+    return counts
+end
+
 # Read text data
 function read_data(dataset::AbstractString)
     f = open(dataset)
@@ -80,7 +95,7 @@ function set_hotset_value!(model::VariableChoiceModel, choice::Vector{Int64},
     model.H[length(choice)][vec2ntuple(choice)] = val
 end
 
-function add_to_hotset!(model::VariableChoiceModel, choice_to_add::Vector{Int64})
+function add_to_hotset_and_retrain!(model::VariableChoiceModel, choice_to_add::Vector{Int64}, data::VariableChoiceData)
     if in_hotset(choice_to_add, model); error("Choice already in hot set."); end
     set_hotset_value(model, choice_to_add, 0.0)
 end
@@ -388,10 +403,8 @@ function learn_utilities!(model::VariableChoiceModel, data::VariableChoiceDatase
     
     function gradient!(grad::Vector{Float64}, x::Vector{Float64})
         for i = 1:length(x); grad[i] = 0.0; end
-        slate_inds = cumsum(data.slate_sizes) + 1
-        unshift!(slate_inds, 1)
-        choice_inds = cumsum(data.choice_sizes) + 1
-        unshift!(choice_inds, 1)
+        slate_inds = index_points(data.slate_sizes)
+        choice_inds = index_points(data.choice_sizes)
         update_model(x)
         for i = 1:length(data.slate_sizes)
             slate = data.slates[slate_inds[i]:(slate_inds[i + 1] - 1)]        
