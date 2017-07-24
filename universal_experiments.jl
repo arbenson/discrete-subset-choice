@@ -1,10 +1,15 @@
 include("universal.jl")
 
+function top_choice_tups(data::UniversalChoiceDataset, num::Int64)
+    counts = [(count, tup) for (tup, count) in get_subset_counts(data)]
+    sort!(counts, rev=true)
+    return [collect(tup) for (count, tup) in counts[1:num]]
+end
+
+
 function negative_corrections(data::UniversalChoiceDataset, num_updates::Int64,
                               basename::AbstractString)
-    counts = [(count, choice_tup) for (choice_tup, count) in get_subset_counts(data)]
-    sort!(counts, rev=true)
-    choices_to_add = [collect(choice_tup) for (count, choice_tup) in counts[1:num_updates]]
+    choices_to_add = top_choice_tups(data, num_updates)
     model = initialize_model(data)
     num_negative_corrections = Int64[]
     for (i, choice) in enumerate(choices_to_add)
@@ -32,9 +37,7 @@ end
 
 function biggest_corrections(data::UniversalChoiceDataset, num_updates::Int64,
                              basename::AbstractString)
-    counts = [(count, choice_tup) for (choice_tup, count) in get_subset_counts(data)]
-    sort!(counts, rev=true)
-    choices_to_add = [collect(choice_tup) for (count, choice_tup) in counts[1:num_updates]]
+    choices_to_add = top_choice_tups(data, num_updates)    
     model = initialize_model(data)
     num_negative_corrections = Int64[]
     for choice in choices_to_add; add_to_hotset!(model, choice); end
@@ -63,6 +66,7 @@ end
 function universal_improvements(data::UniversalChoiceDataset, num_updates::Int64,
                                 basename::AbstractString, update_type::AbstractString)
     # Vector for randomly splitting into training / test data
+    n = length(data.sizes)
     inds = collect(1:length(data.sizes))
     shuffle!(inds)
     num_folds = 10
@@ -72,7 +76,6 @@ function universal_improvements(data::UniversalChoiceDataset, num_updates::Int64
         println(@sprintf("fold %d of %d", fold, num_folds))
 
         # Split into training / test data
-        n = length(data.sizes)
         training = ones(Int64, n)
         fold_size = convert(Int64, floor(n / num_folds))
         test_start_ind = (fold - 1) * fold_size + 1
@@ -83,7 +86,7 @@ function universal_improvements(data::UniversalChoiceDataset, num_updates::Int64
         training_sizes = Int64[]
         training_choices = Int64[]
         test_sizes = Int64[]
-        test_choices = Int64[]        
+        test_choices = Int64[]
         for (ind, (size, choice)) in enumerate(iter_choices(data))
             if training[ind] == 1
                 push!(training_sizes, size)
@@ -102,12 +105,10 @@ function universal_improvements(data::UniversalChoiceDataset, num_updates::Int64
         for (size, choice) in iter_choices(training_data)
             for item in choice; item_counts[item] += 1; end
         end
-        counts = [(count, choice_tup) for (choice_tup, count) in get_subset_counts(training_data)]
-        sort!(counts, rev=true)
 
         if     update_type == "f"
             # Frequency-based updates
-            choices_to_add = [collect(choice_tup) for (count, choice_tup) in counts[1:num_updates]]
+            choices_to_add = top_choice_tups(data, num_updates)
             for (i, choice) in enumerate(choices_to_add)
                 println(@sprintf("iteration %d of %d", i, num_updates))
                 add_to_hotset!(model, choice)
@@ -157,7 +158,7 @@ function universal_improvements(data::UniversalChoiceDataset, num_updates::Int64
             end
         elseif update_type == "g"
             # Greedy-based updates
-            considered_sets = [collect(choice_tup) for (count, choice_tup) in counts[1:num_updates]]
+            considered_sets = top_choice_tups(data, num_updates)
             for i = 1:num_updates
                 println(@sprintf("iteration %d of %d", i, num_updates))                
                 best_update = ()
