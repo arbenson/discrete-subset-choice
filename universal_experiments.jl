@@ -198,7 +198,7 @@ function universal_improvement_experiments()
         data = read_data(dataset_file)
         basename = split(split(dataset_file, "/")[end], ".")[1]
         num_items = length(unique(data.choices))
-        num_updates = min(num_items, 1000)
+        num_updates = min(num_items, 500)
         #universal_improvements(data, num_updates, basename, "f")
         #universal_improvements(data, num_updates, basename, "nl")
         #universal_improvements(data, num_updates, basename, "l")
@@ -208,12 +208,12 @@ function universal_improvement_experiments()
         #biggest_corrections(data, num_updates, basename)
     end
 
-    #run_universal_improvement_experiment("data/bakery-5-25.txt")
-    #run_universal_improvement_experiment("data/walmart-depts-5-25.txt")
-    #run_universal_improvement_experiment("data/walmart-items-5-25.txt")
-    #run_universal_improvement_experiment("data/lastfm-genres-5-25.txt")
-    #run_universal_improvement_experiment("data/kosarak-5-25.txt")
-    #run_universal_improvement_experiment("data/instacart-5-25.txt")
+    run_universal_improvement_experiment("data/bakery-5-25.txt")
+    run_universal_improvement_experiment("data/walmart-depts-5-25.txt")
+    run_universal_improvement_experiment("data/walmart-items-5-25.txt")
+    run_universal_improvement_experiment("data/lastfm-genres-5-25.txt")
+    run_universal_improvement_experiment("data/kosarak-5-25.txt")
+    run_universal_improvement_experiment("data/instacart-5-25.txt")
 end
 
 universal_improvement_experiments()
