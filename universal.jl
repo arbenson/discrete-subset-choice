@@ -88,7 +88,7 @@ function log_likelihood(model::UniversalChoiceModel, data::UniversalChoiceDatase
         size = data.sizes[i]
         ll[i] += log(model.z[size])
         if in_hotset(model, choice)
-            ll[i] += log(hotset_prob(choice, model))
+            ll[i] += log(hotset_prob(model, choice))
         else
             ll[i] += log(model.gammas[length(choice)])
             for item in choice; ll[i] += log(model.probs[item]); end
@@ -158,16 +158,20 @@ end
 function add_to_hotset!(model::UniversalChoiceModel, choice_to_add::Vector{Int64})
     if in_hotset(model, choice_to_add); error("Choice already in hot set."); end
     lc = length(choice_to_add)
-    choice_tup = vec2tuple(choice_to_add)
+    choice_tup = vec2ntuple(choice_to_add)
 
     # Update hotset probability
     choice_count = model.subset_counts[choice_tup]
     model.H[lc][choice_tup] =  choice_count / model.size_counts[lc]
 
     # Update item counts and probability
-    for item in choice_to_add; model.item_counts[item] -= choice_count; end
+    for item in choice_to_add
+        model.item_counts[item] -= choice_count
+    end
     total = sum(model.item_counts)
-    for (i, count) in enumerate(model.item_counts); model.probs[i] = count / total; end
+    for (i, count) in enumerate(model.item_counts)
+        model.probs[i] = count / total
+    end
 
     # Update normalization parameters
     model.gammas = normalization_values(length(model.gammas), model.H, model.probs)

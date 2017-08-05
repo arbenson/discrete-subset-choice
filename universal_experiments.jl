@@ -6,7 +6,6 @@ function top_choice_tups(data::UniversalChoiceDataset, num::Int64)
     return [collect(tup) for (count, tup) in counts[1:num]]
 end
 
-
 function negative_corrections(data::UniversalChoiceDataset, num_updates::Int64,
                               basename::AbstractString)
     choices_to_add = top_choice_tups(data, num_updates)
@@ -158,9 +157,9 @@ function universal_improvements(data::UniversalChoiceDataset, num_updates::Int64
             end
         elseif update_type == "g"
             # Greedy-based updates
-            considered_sets = top_choice_tups(data, num_updates)
+            considered_sets = top_choice_tups(data, num_updates * 3)
             for i = 1:num_updates
-                println(@sprintf("iteration %d of %d", i, num_updates))                
+                println(@sprintf("iteration %d of %d", i, num_updates))
                 best_update = ()
                 best_ll = log_likelihood(model, training_data)
                 for subset in considered_sets
@@ -204,17 +203,17 @@ function universal_improvement_experiments()
         #universal_improvements(data, num_updates, basename, "nl")
         #universal_improvements(data, num_updates, basename, "l")
         #universal_improvements(data, num_updates, basename, "lev")
-        #universal_improvements(data, num_updates, basename, "g")
+        universal_improvements(data, num_updates, basename, "g")
         #negative_corrections(data, num_updates, basename)
-        biggest_corrections(data, num_updates, basename)
+        #biggest_corrections(data, num_updates, basename)
     end
 
-    #run_universal_improvement_experiment("data/bakery-5-25.txt")
+    run_universal_improvement_experiment("data/bakery-5-25.txt")
     #run_universal_improvement_experiment("data/walmart-depts-5-25.txt")
     #run_universal_improvement_experiment("data/walmart-items-5-25.txt")
     #run_universal_improvement_experiment("data/lastfm-genres-5-25.txt")
     #run_universal_improvement_experiment("data/kosarak-5-25.txt")
-    run_universal_improvement_experiment("data/instacart-5-25.txt")
+    #run_universal_improvement_experiment("data/instacart-5-25.txt")
 end
 
 universal_improvement_experiments()

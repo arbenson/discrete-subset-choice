@@ -43,10 +43,8 @@ function universal_likelihood_gains_plot(basename::AbstractString, titlename::Ab
     plot(hotset_sizes, mean_improvements, label="Lift")
     (hotset_sizes, mean_improvements, std_improvements) = read_output("output/$basename-nlift.txt")
     plot(hotset_sizes, mean_improvements, label="Norm. Lift")
-    #(hotset_sizes, mean_improvements, std_improvements) = read_output("output/$basename-lev.txt")
-    #plot(hotset_sizes, mean_improvements, label="Leverage")
 
-    legend()
+    if basename == "Bakery"; legend(); end
     xlabel("Number of corrections")
     ylabel("Mean relative likelihood gain")
     title(titlename)
@@ -103,5 +101,5 @@ function main()
     universal_likelihood_gains_plot("instacart-5-25", "Instacart")    
 end
 
-#main()
-negative_corrections_plot()
+main()
+#negative_corrections_plot()
