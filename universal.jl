@@ -21,7 +21,7 @@ mutable struct UniversalChoiceModel
     z::Vector{Float64}
     probs::Vector{Float64}
     gammas::Vector{Float64}
-    H::Vector{Dict{NTuple,Float64}}
+    H::Dict{NTuple,Float64}
     # Some data to make updating computations faster
     # how often each item appears not in a hot set    
     item_counts::Vector{Int64}
@@ -74,10 +74,9 @@ function iter_choices(data::UniversalChoiceDataset)
 end
 
 in_hotset(model::UniversalChoiceModel, choice::Vector{Int64}) =
-    haskey(model.H[length(choice)], vec2ntuple(choice))
+    haskey(model.H, vec2ntuple(choice))
 
-hotset_prob(model::UniversalChoiceModel, choice::Vector{Int64}) =
-    model.H[length(choice)][vec2ntuple(choice)]
+hotset_prob(model::UniversalChoiceModel, choice::Vector{Int64}) = model.H[vec2ntuple(choice)]
 
 function log_likelihood(model::UniversalChoiceModel, data::UniversalChoiceDataset)
     ns = length(data.sizes)
@@ -97,55 +96,53 @@ function log_likelihood(model::UniversalChoiceModel, data::UniversalChoiceDatase
     return sum(ll)
 end
 
-function normalization_values(max_size::Int64, H::Vector{Dict{NTuple,Float64}},
+function normalization_values(max_size::Int64, H::Dict{NTuple,Float64},
                               item_probs::Vector{Float64})
     gammas = zeros(Float64, max_size)
 
     # No hotsets of size 1
     gammas[1] = 1
     
-    subset_prob(subset::NTuple) = prod([item_probs[item] for item in subset])
+    base_probs = zeros(Float64, max_size)
+    hotset_probs = zeros(Float64, max_size)
+    for (subset, val) in H
+        ns = length(subset)
+        base_probs[ns] += prod([item_probs[item] for item in subset])
+        hotset_probs[ns] += val
+    end
 
     if max_size == 1; return gammas; end
     # normalization for size-2 choice probabilities
-    sum_pi2           = sum([p^2 for p in item_probs])
-    sum_pipj          = (1 - sum_pi2) / 2
-    hotset_probs2     = sum([val for (subset, val) in H[2]])
-    hotset_base_prob2 = sum(convert(Vector{Float64}, [subset_prob(subset) for (subset, val) in H[2]]))
-    gammas[2]         = (1 - hotset_probs2) / (sum_pipj + sum_pi2 - hotset_base_prob2)
+    sum_pi2   = sum([p^2 for p in item_probs])
+    sum_pipj  = (1 - sum_pi2) / 2
+    gammas[2] = (1 - hotset_probs[2]) / (sum_pipj + sum_pi2 - base_probs[2])
 
     if max_size == 2; return gammas; end    
     # normalization for size-3 choice probabilities
-    sum_pi3       = sum([p^3 for p in item_probs])
-    sum_pipjpj    = sum_pi2 - sum_pi3
-    sum_pipjpk    = (1 - sum_pi3 - 3 * sum_pipjpj) / 6
-    hotset_probs3 = sum([val for (key, val) in H[3]])
-    hotset_base_prob3 = sum(convert(Vector{Float64}, [subset_prob(subset) for (subset, val) in H[3]]))    
-    gammas[3]     = (1 - hotset_probs3) / (sum_pipjpk + sum_pipjpj + sum_pi3 - hotset_base_prob3)
+    sum_pi3    = sum([p^3 for p in item_probs])
+    sum_pipjpj = sum_pi2 - sum_pi3
+    sum_pipjpk = (1 - sum_pi3 - 3 * sum_pipjpj) / 6
+    gammas[3]  = (1 - hotset_probs[3]) / (sum_pipjpk + sum_pipjpj + sum_pi3 - base_probs[3])
 
     if max_size == 3; return gammas; end
     # normalization for size-4 choice probabilities
-    sum_pi4       = sum([p^4 for p in item_probs])
-    sum_pi2pj2    = (sum_pi2 ^ 2 - sum_pi4) / 2
-    sum_pipj3     = sum_pi3 - sum_pi4
-    sum_pipjpk2   = (sum_pi2 - sum_pi4 - 2 * sum_pipj3 - 2 * sum_pi2pj2) / 2    
-    sum_pipjpkpl  = (1 - sum_pi4 - 4 * sum_pipj3 - 6 * sum_pi2pj2 - 12 * sum_pipjpk2) / 24    
-    hotset_probs4 = sum([val for (key, val) in H[4]])
-    hotset_base_prob4 = sum(convert(Vector{Float64}, [subset_prob(subset) for (subset, val) in H[4]]))    
-    gammas[4]     = (1 - hotset_probs4) / (sum_pipjpkpl + sum_pi2pj2 + sum_pipj3 + sum_pipjpk2 + sum_pi4 - hotset_base_prob4)
+    sum_pi4      = sum([p^4 for p in item_probs])
+    sum_pi2pj2   = (sum_pi2 ^ 2 - sum_pi4) / 2
+    sum_pipj3    = sum_pi3 - sum_pi4
+    sum_pipjpk2  = (sum_pi2 - sum_pi4 - 2 * sum_pipj3 - 2 * sum_pi2pj2) / 2    
+    sum_pipjpkpl = (1 - sum_pi4 - 4 * sum_pipj3 - 6 * sum_pi2pj2 - 12 * sum_pipjpk2) / 24    
+    gammas[4]    = (1 - hotset_probs[4]) / (sum_pipjpkpl + sum_pi2pj2 + sum_pipj3 + sum_pipjpk2 + sum_pi4 - base_probs[4])
     
     if max_size == 4; return gammas; end
     # normalization for size-5 choice probabilities
-    sum_pi5       = sum([p^5 for p in item_probs])
-    sum_pipj4     = sum_pi4 - sum_pi5
-    sum_pi2pj3    = sum_pi2 * sum_pi3 - sum_pi5
-    sum_pipjpk3   = (sum_pi3 - sum_pi5 - 2 * sum_pipj4 - sum_pi2pj3) / 2    
-    sum_pipj2pk2 = (sum_pi2^2 - sum_pipj4 - 2 * sum_pi2pj3 - sum_pi5) / 2    
-    sum_pipjpkpl2 = sum_pi2 * sum_pipjpk - sum_pipjpk3
+    sum_pi5        = sum([p^5 for p in item_probs])
+    sum_pipj4      = sum_pi4 - sum_pi5
+    sum_pi2pj3     = sum_pi2 * sum_pi3 - sum_pi5
+    sum_pipjpk3    = (sum_pi3 - sum_pi5 - 2 * sum_pipj4 - sum_pi2pj3) / 2    
+    sum_pipj2pk2   = (sum_pi2^2 - sum_pipj4 - 2 * sum_pi2pj3 - sum_pi5) / 2    
+    sum_pipjpkpl2  = sum_pi2 * sum_pipjpk - sum_pipjpk3
     sum_pipjpkplpm = (1.0 - sum_pi5 - 5 * sum_pipj4 - 20 * sum_pipjpk3 - 60 * sum_pipjpkpl2 - 30 * sum_pipj2pk2 - 10 * sum_pi2pj3) / 120
-    hotset_probs5 = sum([val for (key, val) in H[5]])
-    hotset_base_prob5 = sum(convert(Vector{Float64}, [subset_prob(subset) for (subset, val) in H[5]]))    
-    gammas[5] = (1 - hotset_probs5) / (sum_pipjpkplpm + sum_pi5 + sum_pipj4 + sum_pi2pj3 + sum_pipjpk3 + sum_pipjpkpl2 + sum_pipj2pk2 - hotset_base_prob5)
+    gammas[5]      = (1 - hotset_probs[5]) / (sum_pipjpkplpm + sum_pi5 + sum_pipj4 + sum_pi2pj3 + sum_pipjpk3 + sum_pipjpkpl2 + sum_pipj2pk2 - base_probs[5])
     
     # TODO: support larger sizes.  We really shouldn't hard code the above.
     # There is a triangular system we can solve to automatically determine these
@@ -157,12 +154,11 @@ end
 
 function add_to_hotset!(model::UniversalChoiceModel, choice_to_add::Vector{Int64})
     if in_hotset(model, choice_to_add); error("Choice already in hot set."); end
-    lc = length(choice_to_add)
-    choice_tup = vec2ntuple(choice_to_add)
 
     # Update hotset probability
+    choice_tup = vec2ntuple(choice_to_add)
     choice_count = model.subset_counts[choice_tup]
-    model.H[lc][choice_tup] =  choice_count / model.size_counts[lc]
+    model.H[choice_tup] = choice_count / model.size_counts[length(choice_to_add)]
 
     # Update item counts and probability
     for item in choice_to_add
@@ -182,7 +178,7 @@ function remove_from_hotset!(model::UniversalChoiceModel, choice_to_rm::Vector{I
 
     # Update hotset probability
     choice_tup = vec2ntuple(choice_to_rm)
-    delete!(model.H[length(choice_to_rm)], choice_tup)
+    delete!(model.H, choice_tup)
 
     # Update item counts and probability
     choice_count = model.subset_counts[choice_tup]
@@ -217,8 +213,7 @@ function initialize_model(data::UniversalChoiceDataset)
     for (i, count) in enumerate(item_counts); item_probs[i] = count / total; end
 
     # Initialize empty hotsets
-    H = Vector{Dict{NTuple,Float64}}(max_size)
-    for i in 1:max_size; H[i] = Dict{NTuple{i, Int64}, Float64}(); end
+    H = Dict{NTuple,Float64}()
 
     # Initialize normalization constants (gammas)
     gammas = normalization_values(max_size, H, item_probs)
