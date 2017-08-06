@@ -51,6 +51,8 @@ function read_data(dataset::AbstractString)
     sizes = Int64[]
     for line in eachline(f)
         choice = [parse(Int64, v) for v in split(line)]
+        # Note: all choices are sorted!
+        sort!(choice)
         append!(choices, choice)
         push!(sizes, length(choice))
     end
@@ -76,7 +78,8 @@ end
 in_hotset(model::UniversalChoiceModel, choice::Vector{Int64}) =
     haskey(model.H, vec2ntuple(choice))
 
-hotset_prob(model::UniversalChoiceModel, choice::Vector{Int64}) = model.H[vec2ntuple(choice)]
+hotset_prob(model::UniversalChoiceModel, choice::Vector{Int64}) =
+    model.H[vec2ntuple(choice)]
 
 function log_likelihood(model::UniversalChoiceModel, data::UniversalChoiceDataset)
     ns = length(data.sizes)

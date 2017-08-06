@@ -43,8 +43,10 @@ function universal_likelihood_gains_plot(basename::AbstractString, titlename::Ab
     plot(hotset_sizes, mean_improvements, label="Lift")
     (hotset_sizes, mean_improvements, std_improvements) = read_output("output/$basename-nlift.txt")
     plot(hotset_sizes, mean_improvements, label="Norm. Lift")
+    (hotset_sizes, mean_improvements, std_improvements) = read_output("output/$basename-greedy.txt")
+    plot(hotset_sizes, mean_improvements, label="Greedy")    
 
-    if basename == "Bakery"; legend(); end
+    if titlename == "Bakery"; legend(); end
     xlabel("Number of corrections")
     ylabel("Mean relative likelihood gain")
     title(titlename)
@@ -94,11 +96,11 @@ end
 
 function main()
     universal_likelihood_gains_plot("bakery-5-25", "Bakery")
-    universal_likelihood_gains_plot("walmart-items-5-25", "WalmartItems")
     universal_likelihood_gains_plot("walmart-depts-5-25", "WalmartDepts")
-    universal_likelihood_gains_plot("lastfm-genres-5-25", "LastfmGenres")
-    universal_likelihood_gains_plot("kosarak-5-25", "Kosarak")
-    universal_likelihood_gains_plot("instacart-5-25", "Instacart")    
+    #universal_likelihood_gains_plot("walmart-items-5-25", "WalmartItems")
+    #universal_likelihood_gains_plot("lastfm-genres-5-25", "LastfmGenres")
+    #universal_likelihood_gains_plot("kosarak-5-25", "Kosarak")
+    #universal_likelihood_gains_plot("instacart-5-25", "Instacart")    
 end
 
 main()

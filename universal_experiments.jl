@@ -3,6 +3,7 @@ include("universal.jl")
 function top_choice_tups(data::UniversalChoiceDataset, num::Int64)
     counts = [(count, tup) for (tup, count) in get_subset_counts(data)]
     sort!(counts, rev=true)
+    @show num, length(counts)
     return [collect(tup) for (count, tup) in counts[1:num]]
 end
 
@@ -17,13 +18,11 @@ function negative_corrections(data::UniversalChoiceDataset, num_updates::Int64,
 
         # Get negative corrections
         count = 0
-        for hotset in model.H
-            for (subset, val) in hotset
-                separable_prob = prod([model.probs[item] for item in subset])
-                gamma = model.gammas[length(subset)]
-                correction = val - gamma * separable_prob
-                if correction < 0; count += 1; end
-            end
+        for (subset, val) in model.H
+            separable_prob = prod([model.probs[item] for item in subset])
+            gamma = model.gammas[length(subset)]
+            correction = val - gamma * separable_prob
+            if correction < 0; count += 1; end
         end
         push!(num_negative_corrections, count)
     end
@@ -42,13 +41,11 @@ function biggest_corrections(data::UniversalChoiceDataset, num_updates::Int64,
     for choice in choices_to_add; add_to_hotset!(model, choice); end
 
     data = []
-    for hotset in model.H
-        for (subset, val) in hotset
-            separable_prob = prod([model.probs[item] for item in subset])
-            gamma = model.gammas[length(subset)]
-            correction = val - gamma * separable_prob
-            push!(data, (correction, subset))
-        end
+    for (subset, val) in model.H
+        separable_prob = prod([model.probs[item] for item in subset])
+        gamma = model.gammas[length(subset)]
+        correction = val - gamma * separable_prob
+        push!(data, (correction, subset))
     end
 
     sort!(data)
@@ -107,7 +104,7 @@ function universal_improvements(data::UniversalChoiceDataset, num_updates::Int64
 
         if     update_type == "f"
             # Frequency-based updates
-            choices_to_add = top_choice_tups(data, num_updates)
+            choices_to_add = top_choice_tups(training_data, num_updates)
             for (i, choice) in enumerate(choices_to_add)
                 println(@sprintf("iteration %d of %d", i, num_updates))
                 add_to_hotset!(model, choice)
@@ -157,7 +154,7 @@ function universal_improvements(data::UniversalChoiceDataset, num_updates::Int64
             end
         elseif update_type == "g"
             # Greedy-based updates
-            considered_sets = top_choice_tups(data, num_updates * 2)
+            considered_sets = top_choice_tups(training_data, num_updates * 2)
             for i = 1:num_updates
                 println(@sprintf("iteration %d of %d", i, num_updates))
                 best_update = ()
@@ -202,15 +199,14 @@ function universal_improvement_experiments()
         #universal_improvements(data, num_updates, basename, "f")
         #universal_improvements(data, num_updates, basename, "nl")
         #universal_improvements(data, num_updates, basename, "l")
-        #universal_improvements(data, num_updates, basename, "lev")
         universal_improvements(data, num_updates, basename, "g")
         #negative_corrections(data, num_updates, basename)
         #biggest_corrections(data, num_updates, basename)
     end
 
-    #run_universal_improvement_experiment("data/bakery-5-25.txt")
-    #run_universal_improvement_experiment("data/walmart-depts-5-25.txt")
-    #run_universal_improvement_experiment("data/walmart-items-5-25.txt")
+    run_universal_improvement_experiment("data/bakery-5-25.txt")
+    run_universal_improvement_experiment("data/walmart-depts-5-25.txt")
+    run_universal_improvement_experiment("data/walmart-items-5-25.txt")
     run_universal_improvement_experiment("data/lastfm-genres-5-25.txt")
     run_universal_improvement_experiment("data/kosarak-5-25.txt")
     run_universal_improvement_experiment("data/instacart-5-25.txt")
