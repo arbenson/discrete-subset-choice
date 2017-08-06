@@ -37,16 +37,16 @@ function universal_likelihood_gains_plot(basename::AbstractString, titlename::Ab
     end
 
     PyPlot.pygui(true)
-    (hotset_sizes, mean_improvements, std_improvements) = read_output("output/$basename-freq.txt")
-    plot(hotset_sizes, mean_improvements, label="Frequency")
-    (hotset_sizes, mean_improvements, std_improvements) = read_output("output/$basename-lift.txt")
-    plot(hotset_sizes, mean_improvements, label="Lift")
-    (hotset_sizes, mean_improvements, std_improvements) = read_output("output/$basename-nlift.txt")
-    plot(hotset_sizes, mean_improvements, label="Norm. Lift")
     (hotset_sizes, mean_improvements, std_improvements) = read_output("output/$basename-greedy.txt")
-    plot(hotset_sizes, mean_improvements, label="Greedy")    
+    plot(hotset_sizes, mean_improvements, ls="--", lw=3, label="Greedy")    
+    (hotset_sizes, mean_improvements, std_improvements) = read_output("output/$basename-freq.txt")
+    plot(hotset_sizes, mean_improvements, ls="-", lw=1.5, label="Frequency")
+    (hotset_sizes, mean_improvements, std_improvements) = read_output("output/$basename-lift.txt")
+    plot(hotset_sizes, mean_improvements, ls=":", lw=3, label="Lift")
+    (hotset_sizes, mean_improvements, std_improvements) = read_output("output/$basename-nlift.txt")
+    plot(hotset_sizes, mean_improvements, ls="-.", lw=1.5, label="Norm. Lift")
 
-    if titlename == "Bakery"; legend(); end
+    legend(frameon=false)
     xlabel("Number of corrections")
     ylabel("Mean relative likelihood gain")
     title(titlename)
@@ -95,8 +95,9 @@ function negative_corrections_plot()
 end
 
 function main()
-    universal_likelihood_gains_plot("bakery-5-25", "Bakery")
+    #universal_likelihood_gains_plot("bakery-5-25", "Bakery")
     universal_likelihood_gains_plot("walmart-depts-5-25", "WalmartDepts")
+    #universal_likelihood_gains_plot("baby-feeding-regs-5-25", "BabyFeedingRegistries")
     #universal_likelihood_gains_plot("walmart-items-5-25", "WalmartItems")
     #universal_likelihood_gains_plot("lastfm-genres-5-25", "LastfmGenres")
     #universal_likelihood_gains_plot("kosarak-5-25", "Kosarak")
