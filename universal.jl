@@ -167,6 +167,7 @@ function add_to_hotset!(model::UniversalChoiceModel, choice_to_add::Vector{Int64
     for item in choice_to_add
         model.item_counts[item] -= choice_count
     end
+    
     total = sum(model.item_counts)
     for (i, count) in enumerate(model.item_counts)
         model.probs[i] = count / total
