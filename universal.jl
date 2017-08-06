@@ -169,8 +169,8 @@ function add_to_hotset!(model::UniversalChoiceModel, choice_to_add::Vector{Int64
     end
     
     total = sum(model.item_counts)
-    for (i, count) in enumerate(model.item_counts)
-        model.probs[i] = count / total
+    Threads.@threads for i = 1:length(model.item_counts)
+        model.probs[i] = model.item_counts[i] / total
     end
 
     # Update normalization parameters
