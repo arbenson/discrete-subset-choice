@@ -198,7 +198,7 @@ function universal_improvement_experiments()
         data = read_data(dataset_file)
         basename = split(split(dataset_file, "/")[end], ".")[1]
         num_items = length(unique(data.choices))
-        num_updates = min(num_items, 500)
+        num_updates = min(num_items) #, 500)
         #universal_improvements(data, num_updates, basename, "f")
         #universal_improvements(data, num_updates, basename, "nl")
         #universal_improvements(data, num_updates, basename, "l")
