@@ -95,8 +95,8 @@ function negative_corrections_plot()
 end
 
 function main()
-    #universal_likelihood_gains_plot("bakery-5-25", "Bakery")
-    universal_likelihood_gains_plot("walmart-depts-5-25", "WalmartDepts")
+    universal_likelihood_gains_plot("bakery-5-25", "Bakery")
+    #universal_likelihood_gains_plot("walmart-depts-5-25", "WalmartDepts")
     #universal_likelihood_gains_plot("baby-feeding-regs-5-25", "BabyFeedingRegistries")
     #universal_likelihood_gains_plot("walmart-items-5-25", "WalmartItems")
     #universal_likelihood_gains_plot("lastfm-genres-5-25", "LastfmGenres")

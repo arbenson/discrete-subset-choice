@@ -1,7 +1,7 @@
 include("universal.jl")
 
 function top_choice_tups(data::UniversalChoiceDataset, num::Int64)
-    counts = [(count, tup) for (tup, count) in get_subset_counts(data)]
+    counts = [(count, tup) for (tup, count) in get_subset_counts(data) if length(tup) > 1]
     sort!(counts, rev=true)
     return [collect(tup) for (count, tup) in counts[1:num]]
 end
@@ -113,8 +113,10 @@ function universal_improvements(data::UniversalChoiceDataset, num_updates::Int64
             # normalized lift-based updates
             lifts = Vector{Tuple{Float64,NTuple}}()
             for (choice_tup, subset_count) in get_subset_counts(training_data)
-                subset_item_counts = [item_counts[item] for item in choice_tup]
-                push!(lifts, (subset_count^2 / prod(subset_item_counts), choice_tup))
+                if length(choice_tup) > 1
+                    subset_item_counts = [item_counts[item] for item in choice_tup]
+                    push!(lifts, (subset_count^2 / prod(subset_item_counts), choice_tup))
+                end
             end
             sort!(lifts, rev=true)
             choices_to_add = [collect(choice_tup) for (_, choice_tup) in lifts[1:num_updates]]
@@ -127,8 +129,10 @@ function universal_improvements(data::UniversalChoiceDataset, num_updates::Int64
             # Lift-based updates
             lifts = Vector{Tuple{Float64,NTuple}}()
             for (choice_tup, subset_count) in get_subset_counts(training_data)
-                subset_item_counts = [item_counts[item] for item in choice_tup]
-                push!(lifts, (subset_count / prod(subset_item_counts), choice_tup))
+                if length(choice_tup) > 1
+                    subset_item_counts = [item_counts[item] for item in choice_tup]
+                    push!(lifts, (subset_count / prod(subset_item_counts), choice_tup))
+                end
             end
             sort!(lifts, rev=true)
             choices_to_add = [collect(choice_tup) for (_, choice_tup) in lifts[1:num_updates]]
@@ -141,8 +145,10 @@ function universal_improvements(data::UniversalChoiceDataset, num_updates::Int64
             # Leverage-based updates
             levs = Vector{Tuple{Int64,NTuple}}()
             for (choice_tup, subset_count) in get_subset_counts(training_data)
-                subset_item_counts = [item_counts[item] for item in choice_tup]
-                push!(levs, (subset_count - prod(subset_item_counts), choice_tup))
+                if length(choice_tup) > 1                
+                    subset_item_counts = [item_counts[item] for item in choice_tup]
+                    push!(levs, (subset_count - prod(subset_item_counts), choice_tup))
+                end
             end
             sort!(levs, rev=true)
             choices_to_add = [collect(choice_tup) for (_, choice_tup) in levs[1:num_updates]]
@@ -153,15 +159,16 @@ function universal_improvements(data::UniversalChoiceDataset, num_updates::Int64
             end
         elseif update_type == "g"
             # Greedy-based updates
-            considered_sets = top_choice_tups(training_data, num_updates)
+            considered_sets = top_choice_tups(training_data, num_updates * 10)
+            training_subsets, training_counts = subsets_and_counts(training_data)
             for i = 1:num_updates
                 println(@sprintf("iteration %d of %d", i, num_updates))
                 best_update = ()
-                best_ll = log_likelihood(model, training_data)
+                best_ll = log_likelihood(model, training_subsets, training_counts)
                 for subset in considered_sets
                     if !in_hotset(model, subset)
                         add_to_hotset!(model, subset)
-                        ll = log_likelihood(model, training_data)
+                        ll = log_likelihood(model, training_subsets, training_counts)
                         if ll > best_ll || length(best_update) == 0
                             best_ll = ll
                             best_update = subset
@@ -203,13 +210,13 @@ function universal_improvement_experiments()
         #biggest_corrections(data, num_updates, basename)
     end
 
-    run_universal_improvement_experiment("data/bakery-5-25.txt")
-    run_universal_improvement_experiment("data/baby-feeding-regs-5-25.txt")
+    #run_universal_improvement_experiment("data/bakery-5-25.txt")
+    #run_universal_improvement_experiment("data/baby-feeding-regs-5-25.txt")
     run_universal_improvement_experiment("data/walmart-depts-5-25.txt")
     run_universal_improvement_experiment("data/walmart-items-5-25.txt")
-    run_universal_improvement_experiment("data/lastfm-genres-5-25.txt")
-    run_universal_improvement_experiment("data/kosarak-5-25.txt")
-    run_universal_improvement_experiment("data/instacart-5-25.txt")
+    #run_universal_improvement_experiment("data/lastfm-genres-5-25.txt")
+    #run_universal_improvement_experiment("data/kosarak-5-25.txt")
+    #run_universal_improvement_experiment("data/instacart-5-25.txt")
 end
 
 universal_improvement_experiments()

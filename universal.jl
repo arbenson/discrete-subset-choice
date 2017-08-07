@@ -26,22 +26,32 @@ mutable struct UniversalChoiceModel
     # how often each item appears not in a hot set    
     item_counts::Vector{Int64}
     # how many times each subset appears
-    subset_counts::Dict{NTuple,Int64}
+    subset_counts::Dict{NTuple, Int64}
     # number of times choice set of each size appears
     size_counts::Vector{Int64}
 end
 
 function get_subset_counts(data::UniversalChoiceDataset)
-    # Get the counts
     counts = Dict{NTuple, Int64}()
-    for (size, choice) in iter_choices(data)
+    inds = index_points(data.sizes)
+    for i in 1:length(data.sizes)
+        size = data.sizes[i]        
+        choice = data.choices[inds[i]:(inds[i + 1] - 1)]
         choice_tup = vec2ntuple(choice)
-        if length(choice) > 1
-            if !haskey(counts, choice_tup); counts[choice_tup] = 0; end
-            counts[choice_tup] += 1
-        end
+        if !haskey(counts, choice_tup); counts[choice_tup] = 0; end
+        counts[choice_tup] += 1
     end
     return counts
+end
+
+function subsets_and_counts(data::UniversalChoiceDataset)
+    subsets = Vector{NTuple}()
+    counts = Int64[]
+    for (subset, count) in get_subset_counts(data)
+        push!(subsets, subset)
+        push!(counts, count)
+    end
+    return subsets, counts
 end
 
 # Read text data
@@ -75,28 +85,33 @@ function iter_choices(data::UniversalChoiceDataset)
     return zip(data.sizes, choice_vec)
 end
 
-in_hotset(model::UniversalChoiceModel, choice::Vector{Int64}) =
-    haskey(model.H, vec2ntuple(choice))
+in_hotset(model::UniversalChoiceModel, choice::Vector{Int64}) = haskey(model.H, vec2ntuple(choice))
+in_hotset(model::UniversalChoiceModel, choice::NTuple) = haskey(model.H, choice)
+hotset_prob(model::UniversalChoiceModel, choice::Vector{Int64}) = model.H[vec2ntuple(choice)]
+hotset_prob(model::UniversalChoiceModel, choice::NTuple) = model.H[choice]
 
-hotset_prob(model::UniversalChoiceModel, choice::Vector{Int64}) =
-    model.H[vec2ntuple(choice)]
+function log_likelihood(model::UniversalChoiceModel, subsets::Vector{NTuple}, counts::Vector{Int64})
+    ns = length(subsets)
+    all_lls = zeros(Float64, ns)
+    Threads.@threads for i = 1:ns
+        choice = subsets[i]
+        size = length(choice)
+        ll = log(model.z[size])
+        if in_hotset(model, choice)
+            ll += log(hotset_prob(model, choice))
+        else
+            ll += log(model.gammas[length(choice)])
+            for item in choice; ll += log(model.probs[item]); end
+        end
+        all_lls[i] = counts[i] * ll
+    end
+    return sum(all_lls)
+end
+
 
 function log_likelihood(model::UniversalChoiceModel, data::UniversalChoiceDataset)
-    ns = length(data.sizes)
-    ll = zeros(Float64, ns)
-    inds = index_points(data.sizes)
-    Threads.@threads for i = 1:ns
-        choice = data.choices[inds[i]:(inds[i + 1] - 1)]
-        size = data.sizes[i]
-        ll[i] += log(model.z[size])
-        if in_hotset(model, choice)
-            ll[i] += log(hotset_prob(model, choice))
-        else
-            ll[i] += log(model.gammas[length(choice)])
-            for item in choice; ll[i] += log(model.probs[item]); end
-        end
-    end
-    return sum(ll)
+    subsets, counts = subsets_and_counts(data)
+    return log_likelihood(model, subsets, counts)
 end
 
 function normalization_values(max_size::Int64, H::Dict{NTuple,Float64},
