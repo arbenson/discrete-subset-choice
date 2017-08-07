@@ -159,7 +159,7 @@ function universal_improvements(data::UniversalChoiceDataset, num_updates::Int64
             end
         elseif update_type == "g"
             # Greedy-based updates
-            considered_sets = top_choice_tups(training_data, num_updates * 10)
+            considered_sets = top_choice_tups(training_data, num_updates * 3)
             training_subsets, training_counts = subsets_and_counts(training_data)
             for i = 1:num_updates
                 println(@sprintf("iteration %d of %d", i, num_updates))
