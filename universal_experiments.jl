@@ -159,7 +159,7 @@ function universal_improvements(data::UniversalChoiceDataset, num_updates::Int64
             end
         elseif update_type == "g"
             # Greedy-based updates
-            considered_sets = top_choice_tups(training_data, num_updates * 3)
+            considered_sets = top_choice_tups(training_data, num_updates)
             training_subsets, training_counts = subsets_and_counts(training_data)
             for i = 1:num_updates
                 println(@sprintf("iteration %d of %d", i, num_updates))
@@ -210,13 +210,14 @@ function universal_improvement_experiments()
         #biggest_corrections(data, num_updates, basename)
     end
 
-    run_universal_improvement_experiment("data/bakery-5-25.txt")
-    run_universal_improvement_experiment("data/walmart-depts-5-25.txt")
-    run_universal_improvement_experiment("data/walmart-items-5-25.txt")
-    #run_universal_improvement_experiment("data/baby-feeding-regs-5-25.txt")
+    #run_universal_improvement_experiment("data/bakery-5-25.txt")
+    #run_universal_improvement_experiment("data/walmart-depts-5-25.txt")
+    #run_universal_improvement_experiment("data/walmart-items-5-25.txt")
+    run_universal_improvement_experiment("data/baby-feeding-regs-5-25.txt")
+
     #run_universal_improvement_experiment("data/lastfm-genres-5-25.txt")
     #run_universal_improvement_experiment("data/kosarak-5-25.txt")
-    #run_universal_improvement_experiment("data/instacart-5-25.txt")
+    run_universal_improvement_experiment("data/instacart-5-25.txt")
 end
 
 universal_improvement_experiments()
