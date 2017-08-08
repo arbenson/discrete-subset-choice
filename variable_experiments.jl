@@ -34,17 +34,17 @@ function variable_model_freq_improvements(data::VariableChoiceDataset,
         slate_inds = index_points(data.slate_sizes)
         choice_inds = index_points(data.choice_sizes)
         for ind = 1:length(data.choice_sizes)
-            slate = data.slates[slate_inds[i]:(slate_inds[i + 1] - 1)]        
-            choice = data.choices[choice_inds[i]:(choice_inds[i + 1] - 1)]
+            slate = data.slates[slate_inds[ind]:(slate_inds[ind + 1] - 1)]        
+            choice = data.choices[choice_inds[ind]:(choice_inds[ind + 1] - 1)]
             if training[ind] == 1
-                push!(training_slate_sizes, slate_size)
+                push!(training_slate_sizes, length(slate))
                 append!(training_slates, slate)
-                push!(training_choice_sizes, choice_size)
+                push!(training_choice_sizes, length(choice))
                 append!(training_choices, choice)
             else
-                push!(test_slate_sizes, slate_size)
+                push!(test_slate_sizes, length(slate))
                 append!(test_slates, slate)
-                push!(test_choice_sizes, choice_size)
+                push!(test_choice_sizes, length(choice))
                 append!(test_choices, choice)
             end
         end
@@ -54,22 +54,29 @@ function variable_model_freq_improvements(data::VariableChoiceDataset,
         test_data =
             VariableChoiceDataset(test_slate_sizes, test_slates,
                                   test_choice_sizes, test_choices)
-        model = initialize_model(training_data)        
+        model = initialize_model(training_data)
+        learn_model!(model, training_data)
         log_likelihoods[1, fold] = log_likelihood(model, test_data)
 
+        # Get subsets by frequency
         choice_inds = index_points(training_data.choice_sizes)
+        subset_counts = Dict{NTuple, Int64}()
         for i = 1:length(training_data.choice_sizes)
             choice = training_data.choices[choice_inds[i]:(choice_inds[i + 1] - 1)]
-            for item in choice; item_counts[item] += 1; end
+            choice_tup = vec2ntuple(choice)
+            if length(choice_tup) > 1
+                if !haskey(subset_counts, choice_tup); subset_counts[choice_tup] = 0; end
+                subset_counts[choice_tup] += 1
+            end
         end
-
-        counts = [(count, choice_tup) for (choice_tup, count) in get_subset_counts(training_data)]
+        counts = [(count, choice_tup) for (choice_tup, count) in subset_counts]
         sort!(counts, rev=true)
         choices_to_add = [collect(choice_tup) for (count, choice_tup) in counts[1:num_updates]]
 
         for (i, choice) in enumerate(choices_to_add)
             println(@sprintf("iteration %d of %d", i, num_updates))
-            add_to_hotset_and_retrain!(model, choice, training_data)
+            add_to_hotset!(model, choice)
+            learn_utilities!(model, training_data)
             log_likelihoods[i + 1, fold] = log_likelihood(model, test_data)
         end
     end
@@ -86,12 +93,12 @@ function variable_model_frequency_experiments()
         data = read_data(dataset_file)
         basename = split(split(dataset_file, "/")[end], ".")[1]
         num_items = length(unique(data.choices))
-        num_updates = min(num_items, 1000)
+        num_updates = min(num_items, 100)
         variable_model_freq_improvements(data, num_updates, basename)
     end
 
     run("data/yc-cats-5-5.txt")
-    #run("data/yc-items-5-5.txt")    
+    #run("data/yc-items-5-5.txt")
 end
 
 variable_model_frequency_experiments()

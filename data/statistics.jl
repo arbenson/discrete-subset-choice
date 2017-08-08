@@ -20,16 +20,17 @@ function statistics(dataset::AbstractString)
     size_dist = [(k, v) for (k, v) in countmap(sizes)]
     sort!(size_dist)
     for (k, v) in size_dist
-        println(@sprintf("z_%d = %f", k, v / length(sizes)))
+        println(@sprintf("z_%d = %0.2f", k, v / length(sizes)))
     end
 end
 
 function main()
-    statistics("bakery-5-10.txt")
-    statistics("instacart-5-10.txt")
-    statistics("walmart-items-5-10.txt")
-    statistics("walmart-depts-5-10.txt")
-    statistics("kosarak-5-10.txt")
+    statistics("bakery-5-25.txt")
+    statistics("walmart-items-5-25.txt")
+    statistics("walmart-depts-5-25.txt")
+    statistics("kosarak-5-25.txt")
+    statistics("lastfm-genres-5-25.txt")
+    statistics("instacart-5-25.txt")
 end
 
 main()
