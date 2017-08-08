@@ -54,6 +54,7 @@ function variable_model_freq_improvements(data::VariableChoiceDataset,
         test_data =
             VariableChoiceDataset(test_slate_sizes, test_slates,
                                   test_choice_sizes, test_choices)
+        @show maximum(training_choices)
         model = initialize_model(training_data)
         learn_model!(model, training_data)
         log_likelihoods[1, fold] = log_likelihood(model, test_data)

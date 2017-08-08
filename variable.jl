@@ -85,12 +85,16 @@ in_hotset(model::VariableChoiceModel, choice::Vector{Int64}) =
 hotset_utility(model::VariableChoiceModel, choice::Vector{Int64}) =
     model.H[vec2ntuple(choice)]
 
+#=
 function hotset_val(model::VariableChoiceModel, choice::Vector{Int64})
     choice_size = length(choice)
     key = vec2ntuple(choice)
     if !haskey(model.H, key); return 0.0; end
     return model.H[key]
 end
+=#
+hotset_val(model::VariableChoiceModel, choice::Vector{Int64}) =
+    get(model.H, vec2ntuple(choice), 0.0)
 
 function set_hotset_value!(model::VariableChoiceModel, choice::Vector{Int64}, val::Float64)
     model.H[vec2ntuple(choice)] = val
@@ -109,9 +113,9 @@ end
 function expsum_util1(model::VariableChoiceModel, slate::Vector{Int64})
     ns = length(slate)
     total = 0.0
-    for ind_i = 1:ns
-        i = slate[ind_i]
-        total += exp(model.utilities[i])
+    utils = [model.utilities[s] for s in slate]    
+    for i = 1:ns
+        total += exp(utils[i])
     end
     return total
 end
@@ -120,14 +124,13 @@ function expsum_util2(model::VariableChoiceModel, slate::Vector{Int64})
     ns = length(slate)
     total = 0.0
     subset = [0, 0]
-    for ind_i = 1:ns
-        i = slate[ind_i]
-        subset[1] = i
-        si = model.utilities[i]
-        for ind_j = ind_i:ns
-            j = slate[ind_j]
-            subset[2] = j
-            sj = si + model.utilities[j] + hotset_val(model, subset)
+    utils = [model.utilities[s] for s in slate]    
+    for i = 1:ns
+        subset[1] = slate[i]
+        si = utils[i]
+        for j = i:ns
+            subset[2] = slate[j]
+            sj = si + utils[j] + hotset_val(model, subset)
             total += exp(sj)
         end
     end
@@ -138,18 +141,16 @@ function expsum_util3(model::VariableChoiceModel, slate::Vector{Int64})
     ns = length(slate)
     total = 0.0
     subset = [0, 0, 0]
-    for ind_i = 1:ns
-        i = slate[ind_i]        
-        subset[1] = i
-        si = model.utilities[i]
-        for ind_j = ind_i:ns
-            j = slate[ind_j]            
-            subset[2] = j
-            sj = si + model.utilities[j]
-            for ind_k = ind_j:ns
-                k = slate[ind_k]
-                subset[3] = k
-                sk = sj + model.utilities[k] + hotset_val(model, subset)
+    utils = [model.utilities[s] for s in slate]    
+    for i = 1:ns
+        subset[1] = slate[i]
+        si = utils[i]
+        for j = i:ns
+            subset[2] = slate[j]
+            sj = si + utils[j]
+            for k = j:ns
+                subset[3] = slate[k]
+                sk = sj + utils[k] + hotset_val(model, subset)
                 total += exp(sk)
             end
         end
@@ -161,22 +162,19 @@ function expsum_util4(model::VariableChoiceModel, slate::Vector{Int64})
     ns = length(slate)
     total = 0.0
     subset = [0, 0, 0, 0]
-    for ind_i = 1:ns
-        i = slate[ind_i]
-        subset[1] = i
-        si = model.utilities[i]
-        for ind_j = ind_i:ns
-            j = slate[ind_j]
-            subset[2] = j
-            sj = si + model.utilities[j]
-            for ind_k = ind_j:ns
-                k = slate[ind_k]                
-                subset[3] = k
-                sk = sj + model.utilities[k]
-                for ind_l = ind_k:ns
-                    l = slate[ind_l]                    
-                    subset[4] = l
-                    sl = sk + model.utilities[l] + hotset_val(model, subset)
+    utils = [model.utilities[s] for s in slate]    
+    for i = 1:ns
+        subset[1] = slate[i]
+        si = utils[i]
+        for j = i:ns
+            subset[2] = slate[j]
+            sj = si + utils[j]
+            for k = j:ns
+                subset[3] = slate[k]
+                sk = sj + utils[k]
+                for l = k:ns
+                    subset[4] = slate[l]
+                    sl = sk + utils[l] + hotset_val(model, subset)
                     total += exp(sl)
                 end
             end
@@ -189,26 +187,22 @@ function expsum_util5(model::VariableChoiceModel, slate::Vector{Int64})
     ns = length(slate)
     total = 0.0
     subset = [0, 0, 0, 0, 0]
-    for ind_i = 1:ns
-        i = slate[ind_i]        
-        subset[1] = i
-        si = model.utilities[i]
-        for ind_j = ind_i:ns
-            j = slate[ind_j]
-            subset[2] = j
-            sj = si + model.utilities[j]
-            for ind_k = ind_j:ns
-                k = slate[ind_k]
-                subset[3] = k
-                sk = sj + model.utilities[k]
-                for ind_l = ind_k:ns
-                    l = slate[ind_l]
-                    subset[4] = l
-                    sl = sk + model.utilities[l]
-                    for ind_m = ind_l:ns
-                        m = slate[ind_m]
-                        subset[5] = m
-                        sm = sl + model.utilities[m] + hotset_val(model, subset)
+    utils = [model.utilities[s] for s in slate]
+    for i = 1:ns
+        subset[1] = slate[i]
+        si = utils[i]
+        for j = i:ns
+            subset[2] = slate[j]
+            sj = si + utils[j]
+            for k = j:ns
+                subset[3] = slate[k]
+                sk = sj + utils[k]
+                for l = k:ns
+                    subset[4] = slate[l]
+                    sl = sk + utils[l]
+                    for m = l:ns
+                        subset[5] = slate[m]
+                        sm = sl + utils[m] + hotset_val(model, subset)
                         total += exp(sm)
                     end
                 end
@@ -228,9 +222,9 @@ function gradient_update1!(model::VariableChoiceModel, slate::Vector{Int64},
     end
     assert(!isnan(sum))
     ns = length(slate)
-    for ind_i = 1:ns
-        i = slate[ind_i]
-        grad[i] += exp(model.utilities[i]) / sum
+    utils = [model.utilities[s] for s in slate]        
+    for i = 1:ns
+        grad[i] += exp(utils[i]) / sum
     end
 end
 
@@ -240,14 +234,13 @@ function gradient_update2!(model::VariableChoiceModel, slate::Vector{Int64},
     assert(!isnan(sum))    
     ns = length(slate)
     subset = [0, 0]
-    for ind_i = 1:ns
-        i = slate[ind_i]
-        subset[1] = i
+    utils = [model.utilities[s] for s in slate]    
+    for i = 1:ns
+        subset[1] = slate[i]
         si = model.utilities[i]
-        for ind_j = ind_i:ns
-            j = slate[ind_j]            
-            subset[2] = j
-            sj = si + model.utilities[j] + hotset_val(model, subset)
+        for j = i:ns
+            subset[2] = slate[j]
+            sj = si + utils[j] + hotset_val(model, subset)
             grad[subset] += exp(sj) / sum
             if in_hotset(model, subset)
                 grad[hotset_inds[vec2ntuple(subset)]] += exp(sj) / sum
@@ -262,18 +255,16 @@ function gradient_update3!(model::VariableChoiceModel, slate::Vector{Int64},
     assert(!isnan(sum))    
     ns = length(slate)
     subset = [0, 0, 0]
-    for ind_i = 1:ns
-        i = slate[ind_i]        
-        subset[1] = i
-        si = model.utilities[i]
-        for ind_j = ind_i:ns
-            j = slate[ind_j]            
-            subset[2] = j
-            sj = si + model.utilities[j]
-            for ind_k = ind_j:ns
-                k = slate[ind_k]
-                subset[3] = k
-                sk = sj + model.utilities[k] + hotset_val(model, subset)
+    utils = [model.utilities[s] for s in slate]    
+    for i = 1:ns
+        subset[1] = slate[i]
+        si = utils[i]
+        for j = i:ns
+            subset[2] = slate[j]
+            sj = si + utils[j]
+            for k = j:ns
+                subset[3] = slate[k]
+                sk = sj + utils[k] + hotset_val(model, subset)
                 grad[subset] += exp(sk) / sum
                 if in_hotset(model, subset)
                     grad[hotset_inds[vec2ntuple(subset)]] += exp(sk) / sum
@@ -289,22 +280,19 @@ function gradient_update4!(model::VariableChoiceModel, slate::Vector{Int64},
     assert(!isnan(sum))    
     ns = length(slate)
     subset = [0, 0, 0, 0]
-    for ind_i = 1:ns
-        i = slate[ind_i]
-        subset[1] = i
-        si = model.utilities[i]
-        for ind_j = ind_i:ns
-            j = slate[ind_j]            
-            subset[2] = j
-            sj = si + model.utilities[j]
-            for ind_k = ind_j:ns
-                k = slate[ind_k]                
-                subset[3] = k
-                sk = sj + model.utilities[k]
-                for ind_l = ind_k:ns
-                    l = slate[ind_l]                    
-                    subset[4] = l
-                    sl = sk + model.utilities[l] + hotset_val(model, subset)
+    utils = [model.utilities[s] for s in slate]    
+    for i = 1:ns
+        subset[1] = slate[i]
+        si = utils[i]
+        for j = i:ns
+            subset[2] = slate[j]
+            sj = si + utils[j]
+            for k = j:ns
+                subset[3] = slate[k]
+                sk = sj + utils[k]
+                for l = k:ns
+                    subset[4] = slate[l]
+                    sl = sk + utils[l] + hotset_val(model, subset)
                     grad[subset] += exp(sl) / sum
                     if in_hotset(model, subset)
                         grad[hotset_inds[vec2ntuple(subset)]] += exp(sl) / sum
@@ -321,26 +309,22 @@ function gradient_update5!(model::VariableChoiceModel, slate::Vector{Int64},
     assert(!isnan(sum))
     ns = length(slate)
     subset = [0, 0, 0, 0, 0]
-    for ind_i = 1:ns
-        i = slate[ind_i]
-        subset[1] = i
-        si = model.utilities[i]
-        for ind_j = ind_i:ns
-            j = slate[ind_j]
-            subset[2] = j
-            sj = si + model.utilities[j]
-            for ind_k = ind_j:ns
-                k = slate[ind_k]
-                subset[3] = k
-                sk = sj + model.utilities[k]
-                for ind_l = ind_k:ns
-                    l = slate[ind_l]
-                    subset[4] = l
-                    sl = sk + model.utilities[l]
-                    for ind_m = ind_l:ns
-                        m = slate[ind_m]
-                        subset[5] = m
-                        sm = sl + model.utilities[m] + hotset_val(model, subset)
+    utils = [model.utilities[s] for s in slate]    
+    for i = 1:ns
+        subset[1] = slate[i]
+        si = utils[i]
+        for j = i:ns
+            subset[2] = slate[j]
+            sj = si + utils[j]
+            for k = j:ns
+                subset[3] = slate[k]
+                sk = sj + utils[k]
+                for l = k:ns
+                    subset[4] = slate[l]
+                    sl = sk + utils[l]
+                    for m = l:ns
+                        subset[5] = slate[m]
+                        sm = sl + utils[m] + hotset_val(model, subset)
                         grad[subset] += exp(sm) / sum
                         if in_hotset(model, subset)
                             grad[hotset_inds[vec2ntuple(subset)]] += exp(sm) / sum
@@ -437,6 +421,7 @@ function learn_utilities!(model::VariableChoiceModel, data::VariableChoiceDatase
         grad[maxind] = 0.0
         gnorm = norm(grad, 2)
         for i = 1:length(x); grad[i] /= gnorm; end
+        @show maximum(x)
     end
 
     nvars = length(model.utilities) + length(hotset_tups)
