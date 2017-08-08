@@ -421,8 +421,8 @@ function learn_utilities!(model::VariableChoiceModel, data::VariableChoiceDatase
     end
 
     nvars = length(model.utilities) + length(hotset_tups)
-    options = Optim.Options(f_tol=1e-4, show_trace=true, show_every=1, extended_trace=true)
-    #options = Optim.Options(f_tol=1e-6)
+    #options = Optim.Options(f_tol=1e-4, show_trace=true, show_every=1, extended_trace=true)
+    options = Optim.Options(f_tol=1e-4)
     x0 = [copy(model.utilities); hotset_vals]
     res = optimize(neg_log_likelihood!, gradient!, x0,
                    LBFGS(; linesearch=LineSearches.BackTracking()), options)
