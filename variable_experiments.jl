@@ -98,8 +98,8 @@ function variable_model_frequency_experiments()
         variable_model_freq_improvements(data, num_updates, basename)
     end
 
-    #run("data/yc-cats-5-5.txt")
-    run("data/yc-items-5-5.txt")
+    #run("data/yc-cats-5-8-5.txt")
+    run("data/yc-items-5-8-5.txt")
 end
 
 variable_model_frequency_experiments()

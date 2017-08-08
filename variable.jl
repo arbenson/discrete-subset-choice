@@ -215,16 +215,11 @@ end
 function gradient_update1!(model::VariableChoiceModel, slate::Vector{Int64},
                            grad::Vector{Float64})
     sum = expsum_util1(model, slate)
-    if isnan(sum)
-        @show slate
-        @show model.utilities[slate[1]]
-        @show exp(model.utilities[slate[1]])
-    end
     assert(!isnan(sum))
     ns = length(slate)
     utils = [model.utilities[s] for s in slate]        
     for i = 1:ns
-        grad[i] += exp(utils[i]) / sum
+        grad[slate[i]] += exp(utils[i]) / sum
     end
 end
 
@@ -417,8 +412,9 @@ function learn_utilities!(model::VariableChoiceModel, data::VariableChoiceDatase
             end
             update_gradient_from_slate!(model, grad, slate, size, hotset_inds) 
         end
-        (_, maxind) = findmax(x)
-        grad[maxind] = 0.0
+        # arbitrarily set the first item utility to be fixed
+        grad[1] = 0.0
+        # scale the gradient because the exponentials can get too large
         gnorm = norm(grad, 2)
         for i = 1:length(x); grad[i] /= gnorm; end
         @show maximum(x)
@@ -477,12 +473,3 @@ function learn_model!(model::VariableChoiceModel, data::VariableChoiceDataset)
     @show model.z
     learn_utilities!(model, data)
 end
-
-function main()
-    data = read_data("data/yc-items-5-5.txt")
-    model = initialize_model(data)
-    learn_model!(model, data)
-    return model
-end
-
-#main()
