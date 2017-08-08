@@ -7,7 +7,7 @@ function variable_model_freq_improvements(data::VariableChoiceDataset,
     n = length(data.choice_sizes)
     inds = collect(1:n)
     shuffle!(inds)
-    num_folds = 10
+    num_folds = 5
     log_likelihoods = zeros(Float64, num_updates + 1, num_folds)
     
     for fold in 1:num_folds
@@ -97,8 +97,8 @@ function variable_model_frequency_experiments()
         variable_model_freq_improvements(data, num_updates, basename)
     end
 
-    run("data/yc-cats-5-5.txt")
-    #run("data/yc-items-5-5.txt")
+    #run("data/yc-cats-5-5.txt")
+    run("data/yc-items-5-5.txt")
 end
 
 variable_model_frequency_experiments()
