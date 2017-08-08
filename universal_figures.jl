@@ -2,50 +2,50 @@ include("universal.jl")
 
 using PyPlot
 
-function universal_likelihood_gains_plot(basename::AbstractString, titlename::AbstractString)
-    function read_output(filename::AbstractString)
-        input_file = open(filename)
-        hotset_sizes = []
-        model_lls = []
-        f = open(filename)
-        for line in eachline(f)
-            exp_data = split(line)
-            push!(hotset_sizes, parse(Int64, exp_data[1]))
-            fold_lls = [parse(Float64, v) for v in exp_data[2:end]]
-            push!(model_lls, fold_lls)
-        end
-        close(f)
-        # Get mean and std of ll improvements
-
-        data = read_data("data/$basename.txt")
-        num_choices = length(data.sizes)
-
-        num_folds = length(model_lls[1])
-        num_fold_choices = convert(Int64, floor(num_choices / num_folds)) * ones(Int64, num_folds)
-        num_extra = num_choices - sum(num_fold_choices)
-        num_fold_choices[end] += num_extra
-
-        mean_improvements = []
-        std_improvements = []
-        for lls in model_lls
-            improvements = exp.((lls - model_lls[1]) ./ num_fold_choices)
-            push!(mean_improvements, mean(improvements))
-            push!(std_improvements, std(improvements))            
-        end
-        
-        return (hotset_sizes, mean_improvements, std_improvements)
+function read_output(basename::AbstractString, filename::AbstractString)
+    input_file = open(filename)
+    hotset_sizes = []
+    model_lls = []
+    f = open(filename)
+    for line in eachline(f)
+        exp_data = split(line)
+        push!(hotset_sizes, parse(Int64, exp_data[1]))
+        fold_lls = [parse(Float64, v) for v in exp_data[2:end]]
+        push!(model_lls, fold_lls)
     end
+    close(f)
+    
+    data = read_data("data/$basename.txt")
+    num_choices = length(data.sizes)
+    
+    num_folds = length(model_lls[1])
+    num_fold_choices = convert(Int64, floor(num_choices / num_folds)) * ones(Int64, num_folds)
+    num_extra = num_choices - sum(num_fold_choices)
+    num_fold_choices[end] += num_extra
+    
+    mean_improvements = []
+    std_improvements = []
+    for lls in model_lls
+        improvements = exp.((lls - model_lls[1]) ./ num_fold_choices)
+        push!(mean_improvements, mean(improvements))
+        push!(std_improvements, std(improvements))            
+    end
+    
+    return (hotset_sizes, mean_improvements, std_improvements)
+end
 
+
+function universal_likelihood_gains_plot(basename::AbstractString, titlename::AbstractString)
     PyPlot.pygui(true)
-    #(hotset_sizes, mean_improvements, std_improvements) = read_output("output/$basename-greedy.txt")
-    #plot(hotset_sizes, mean_improvements, ls="--", lw=4, label="Greedy-Freq.")
-    #plot([0], [1], ls="--", lw=4, label="Greedy-Freq.")
-    (hotset_sizes, mean_improvements, std_improvements) = read_output("output/$basename-freq.txt")
-    plot(hotset_sizes, mean_improvements, ls="-", lw=2.5, label="Frequency")
-    (hotset_sizes, mean_improvements, std_improvements) = read_output("output/$basename-lift.txt")
-    plot(hotset_sizes, mean_improvements, ls=":", lw=4, label="Lift")
-    (hotset_sizes, mean_improvements, std_improvements) = read_output("output/$basename-nlift.txt")
-    plot(hotset_sizes, mean_improvements, ls="-.", lw=2.5, label="Norm. Lift")
+    (hotset_sizes, means, stds) = read_output(basename, "output/$basename-freq.txt")
+    plot(hotset_sizes, means, ls="-", lw=2, label="Frequency", color="#e41a1c")
+    fill_between(hotset_sizes, means + stds, means - stds, color="#fbb4ae")
+    (hotset_sizes, means, stds) = read_output(basename, "output/$basename-lift.txt")
+    plot(hotset_sizes, means, ls="--", lw=2, label="Lift", color="#377eb8")
+    fill_between(hotset_sizes, means + stds, means - stds, color="#b3cde3")    
+    (hotset_sizes, means, stds) = read_output(basename, "output/$basename-nlift.txt")
+    plot(hotset_sizes, means, ls=":", lw=3, label="Norm. Lift", color="#4daf4a")
+    fill_between(hotset_sizes, means + stds, means - stds, color="#ccebc5")
 
     fsz = 20  # font size
     if titlename == "WalmartDepts"
@@ -107,8 +107,8 @@ function main()
     universal_likelihood_gains_plot("walmart-items-5-25", "WalmartItems")
     universal_likelihood_gains_plot("lastfm-genres-5-25", "LastfmGenres")
     universal_likelihood_gains_plot("kosarak-5-25", "Kosarak")
-    universal_likelihood_gains_plot("instacart-5-25", "Instacart")    
+    universal_likelihood_gains_plot("instacart-5-25", "Instacart")
 end
-
 main()
 #negative_corrections_plot()
+
