@@ -406,6 +406,7 @@ function learn_utilities!(model::VariableChoiceModel, data::VariableChoiceDatase
     
     function update_model!(x::Vector{Float64})
         # Vector x contains item utilities and hotset utilities
+        x[find(isnan.(x))] = 0.0
         model.utilities = copy(x[1:n_items])
         for (tup, val) in zip(hotset_tups, x[(n_items + 1):end])
             set_hotset_value!(model, tup, val)
@@ -421,9 +422,6 @@ function learn_utilities!(model::VariableChoiceModel, data::VariableChoiceDatase
     choice_inds = index_points(data.choice_sizes)
     function gradient!(grad::Vector{Float64}, x::Vector{Float64})
         for i = 1:length(x); grad[i] = 0.0; end
-        max_x = maximum(x)
-        for i = 1:n_items; x[i] -= max_x; end
-        @show max_x
         update_model!(x)
         for i = 1:length(data.slate_sizes)
             slate = data.slates[slate_inds[i]:(slate_inds[i + 1] - 1)]        
