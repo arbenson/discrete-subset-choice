@@ -97,7 +97,7 @@ function variable_model_frequency_experiments()
         data = read_data(dataset_file)
         basename = split(split(dataset_file, "/")[end], ".")[1]
         num_items = length(unique(data.choices))
-        num_updates = min(num_items, 5)
+        num_updates = min(num_items, 100)
         variable_model_freq_improvements(data, num_updates, basename)
     end
 
