@@ -7,7 +7,7 @@ function variable_model_freq_improvements(data::VariableChoiceDataset,
     n = length(data.choice_sizes)
     inds = collect(1:n)
     shuffle!(inds)
-    num_folds = 5
+    num_folds = 10
     log_likelihoods = zeros(Float64, num_updates + 1, num_folds)
     
     for fold in 1:num_folds
