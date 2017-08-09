@@ -76,7 +76,21 @@ function apply_cutoffs(dataset::AbstractString, choice_size_cutoff::Int64, slate
     # write out results
     basename = split(dataset, ".")[1]
     output = open("$basename-$(choice_size_cutoff)-$(slate_size_cutoff)-$(selected_cutoff)-$(total_cutoff).txt", "w")
+
+    item_map = Dict{Int64, Int64}()
+    function get_id(key::Int64)
+        if !haskey(item_map, key)
+            n = length(item_map) + 1
+            item_map[key] = n
+        end
+        return item_map[key]
+    end
+    
     for (slate_size, slate, choice_size, choice) in iter_slates_choices(data)
+        slate = [get_id(k) for k in slate]
+        sort!(slate)
+        choice = [get_id(k) for k in choice]
+        sort!(choice)
         sort!(slate)
         sort!(choice)
         write(output, @sprintf("%s;%s\n", join(slate, " "), join(choice, " ")))
@@ -84,8 +98,8 @@ function apply_cutoffs(dataset::AbstractString, choice_size_cutoff::Int64, slate
 end
 
 function main()
-    apply_cutoffs("yc-items.txt", 5, 15, 4, 8)
-    apply_cutoffs("yc-cats.txt", 5, 15, 4, 8)
+    #apply_cutoffs("yc-items.txt", 5, 15, 4, 8)
+    apply_cutoffs("yc-cats.txt", 5, 15, 4, 8)    
 end
 
 main()

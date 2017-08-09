@@ -407,18 +407,20 @@ function learn_utilities!(model::VariableChoiceModel, data::VariableChoiceDatase
         grad[1] = 0.0
         # scale the gradient because the exponentials can get too large
         gnorm = norm(grad, 2)
-        for i = 1:length(x); grad[i] /= gnorm; end
+        if gnorm > 10
+            for i = 1:length(x); grad[i] /= gnorm; end
+        end
+        @show maximum(x)
     end
 
-    #options = Optim.Options(f_tol=1e-6, show_trace=true, show_every=1, extended_trace=true)
-    options = Optim.Options(f_tol=1e-6, f_calls_limit=25, show_trace=true)
+    options = Optim.Options(show_trace=true, show_every=1, extended_trace=true)
+    #options = Optim.Options(f_tol=1e-6, f_calls_limit=25, show_trace=true)
     x0 = [copy(model.utilities); hotset_vals]
-    #res = optimize(neg_log_likelihood!, gradient!, x0, LBFGS(; linesearch=LineSearches.BackTracking()))
     res = optimize(neg_log_likelihood!, gradient!, x0,
-                   AcceleratedGradientDescent(; linesearch=LineSearches.BackTracking()), options)
+                   LBFGS(; linesearch=LineSearches.BackTracking()), options)
+    #res = optimize(neg_log_likelihood!, gradient!, x0,
+    #               AcceleratedGradientDescent(), options)
     update_model!(res.minimizer)
-    hsv = res.minimizer[(n_items + 1):end]
-    @show hsv
 end
 
 function learn_size_probs!(model::VariableChoiceModel, data::VariableChoiceDataset)
@@ -435,7 +437,7 @@ function learn_size_probs!(model::VariableChoiceModel, data::VariableChoiceDatas
     end
 
     function gradient!(grad::Vector{Float64}, x::Vector{Float64})
-        # Assume utility of first element is 0
+        # Note: assume utility of first element is 0
         for i = 1:length(x); grad[i] = 0.0; end
         for (slate_size, choice_size) in zip(data.slate_sizes, data.choice_sizes)
             if choice_size > 1; grad[choice_size] -= 1; end
@@ -462,6 +464,5 @@ end
 
 function learn_model!(model::VariableChoiceModel, data::VariableChoiceDataset)
     learn_size_probs!(model, data)
-    @show model.z
     learn_utilities!(model, data)
 end

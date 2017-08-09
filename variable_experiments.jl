@@ -79,6 +79,9 @@ function variable_model_freq_improvements(data::VariableChoiceDataset,
             add_to_hotset!(model, choice)
             learn_utilities!(model, training_data)
             log_likelihoods[i + 1, fold] = log_likelihood(model, test_data)
+            ntest = length(test_data.choices)
+            improve = exp((log_likelihoods[i + 1, fold] - log_likelihoods[1, fold]) / ntest)
+            @show improve
         end
     end
 
@@ -94,11 +97,13 @@ function variable_model_frequency_experiments()
         data = read_data(dataset_file)
         basename = split(split(dataset_file, "/")[end], ".")[1]
         num_items = length(unique(data.choices))
-        num_updates = min(num_items, 100)
+        num_updates = min(num_items, 5)
         variable_model_freq_improvements(data, num_updates, basename)
     end
 
-    run("data/yc-cats-5-10-4-8.txt")
+    #run("data/yc-cats-5-5.txt")
+    #run("data/yc-cats-5-10-4-8.txt")
+    run("data/yc-items-5-15-4-8.txt")
 end
 
 variable_model_frequency_experiments()

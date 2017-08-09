@@ -3,7 +3,6 @@ include("universal.jl")
 using PyPlot
 
 function read_output(basename::AbstractString, filename::AbstractString)
-    input_file = open(filename)
     hotset_sizes = []
     model_lls = []
     f = open(filename)

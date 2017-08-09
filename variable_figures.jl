@@ -2,11 +2,10 @@ include("variable.jl")
 
 using PyPlot
 
-function read_output(basename::AbstractString, filename::AbstractString)
-    input_file = open(filename)
+function read_output(basename::AbstractString)
     hotset_sizes = []
     model_lls = []
-    f = open(filename)
+    f = open("output/$basename-freq.txt")
     for line in eachline(f)
         exp_data = split(line)
         push!(hotset_sizes, parse(Int64, exp_data[1]))
@@ -27,6 +26,7 @@ function read_output(basename::AbstractString, filename::AbstractString)
     std_improvements = []
     for lls in model_lls
         improvements = exp.((lls - model_lls[1]) ./ num_fold_choices)
+        #improvements = lls ./ model_lls[1]
         push!(mean_improvements, mean(improvements))
         push!(std_improvements, std(improvements))            
     end
@@ -36,9 +36,11 @@ end
 
 function variable_likelihood_gains_plot()
     PyPlot.pygui(true)
-    #(hotset_sizes, means, stds) = read_output("yc-cats-5-8-5", "output/yc-cats-5-8-5-freq.txt")
-    (hotset_sizes, means, stds) = read_output("yc-cats-3-10-4-8", "output/yc-cats-5-10-4-8-freq.txt")
-    #(hotset_sizes, means, stds) = read_output("yc-cats-5-15-4-8", "output/yc-cats-5-15-4-8-freq.txt")
+    #(hotset_sizes, means, stds) = read_output("yc-cats-5-8-5")
+    #(hotset_sizes, means, stds) = read_output("yc-cats-3-10-4-8")
+    #(hotset_sizes, means, stds) = read_output("yc-cats-5-15-4-8")
+    #(hotset_sizes, means, stds) = read_output("yc-cats-5-5")
+    (hotset_sizes, means, stds) = read_output("yc-cats-5-10-4-8")
 
     @show means
     plot(hotset_sizes, means, ls="-", lw=2.5, label="YcCats")
