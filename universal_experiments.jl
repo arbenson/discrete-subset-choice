@@ -58,6 +58,84 @@ function biggest_corrections(data::UniversalChoiceDataset, num_updates::Int64,
     end
 end
 
+function universal_improvements_single(data::UniversalChoiceDataset, num_updates::Int64,
+                                       basename::AbstractString, update_type::AbstractString)
+
+    # Vector for randomly splitting into training / test data
+    n = length(data.sizes)
+    inds = collect(1:length(data.sizes))
+    log_likelihoods = zeros(Float64, num_updates + 1)
+
+    # Split into training / test data
+    training = ones(Int64, n)
+    training_end = convert(Int64, floor(0.8 * n))
+    training_sizes   = Int64[]
+    training_choices = Int64[]
+    test_sizes       = Int64[]
+    test_choices     = Int64[]
+    for (ind, (size, choice)) in enumerate(iter_choices(data))
+        if ind <= training_end
+            push!(training_sizes, size)
+            append!(training_choices, choice)
+        else
+            push!(test_sizes, size)
+            append!(test_choices, choice)
+        end
+    end
+    training_data = UniversalChoiceDataset(training_sizes, training_choices)
+    test_data = UniversalChoiceDataset(test_sizes, test_choices)
+    model = initialize_model(training_data)
+    log_likelihoods[1] = log_likelihood(model, test_data)
+    
+    item_counts = zeros(Int64, maximum(data.choices))
+    for (size, choice) in iter_choices(training_data)
+        for item in choice; item_counts[item] += 1; end
+    end
+
+    choices_to_add = top_choice_tups(training_data, num_updates)
+    if     update_type == "f"
+        # Frequency-based updates
+    elseif update_type == "nl"
+        # normalized lift-based updates
+        lifts = Vector{Tuple{Float64,NTuple}}()
+        for (choice_tup, subset_count) in get_subset_counts(training_data)
+            if length(choice_tup) > 1
+                subset_item_counts = [item_counts[item] for item in choice_tup]
+                push!(lifts, (subset_count^2 / prod(subset_item_counts), choice_tup))
+            end
+        end
+        sort!(lifts, rev=true)
+        choices_to_add = [collect(choice_tup) for (_, choice_tup) in lifts[1:num_updates]]
+    elseif update_type == "l"
+        # Lift-based updates
+        lifts = Vector{Tuple{Float64,NTuple}}()
+        for (choice_tup, subset_count) in get_subset_counts(training_data)
+            if length(choice_tup) > 1
+                subset_item_counts = [item_counts[item] for item in choice_tup]
+                push!(lifts, (subset_count / prod(subset_item_counts), choice_tup))
+            end
+        end
+        sort!(lifts, rev=true)
+        choices_to_add = [collect(choice_tup) for (_, choice_tup) in lifts[1:num_updates]]
+    else
+        error("Unknown update type")
+    end
+
+    for (i, choice) in enumerate(choices_to_add)
+        println(@sprintf("iteration %d of %d", i, num_updates))
+        add_to_hotset!(model, choice)
+        log_likelihoods[i + 1] = log_likelihood(model, test_data)
+    end
+    
+    if     update_type == "f";   output = open("output/$basename-single-freq.txt", "w")
+    elseif update_type == "l";   output = open("output/$basename-single-lift.txt", "w")
+    elseif update_type == "nl";  output = open("output/$basename-single-nlift.txt", "w")
+    else   error("Unknown update type")    end
+    for i = 0:num_updates
+        write(output, @sprintf("%d %s\n", i, join(log_likelihoods[i + 1, :], " ")))
+    end
+end
+
 function universal_improvements(data::UniversalChoiceDataset, num_updates::Int64,
                                 basename::AbstractString, update_type::AbstractString)
     # Vector for randomly splitting into training / test data
@@ -202,22 +280,28 @@ function universal_improvement_experiments()
         basename = split(split(dataset_file, "/")[end], ".")[1]
         num_items = length(unique(data.choices))
         num_updates = min(num_items, 500)
-        universal_improvements(data, num_updates, basename, "f")
-        universal_improvements(data, num_updates, basename, "nl")
-        universal_improvements(data, num_updates, basename, "l")
-        #universal_improvements(data, num_updates, basename, "g")
-        #negative_corrections(data, num_updates, basename)
-        #biggest_corrections(data, num_updates, basename)
+        tic()
+        universal_improvements_single(data, num_updates, basename, "f")
+        tf = toc()
+        tic()
+        @time universal_improvements_single(data, num_updates, basename, "nl")
+        tnl = toc()
+        tic()
+        @time universal_improvements_single(data, num_updates, basename, "l")
+        tl = toc()
+        f = open("$basename-times.txt", "w")
+        write(f, @sprintf("freq: %f\n", tf))
+        write(f, @sprintf("norm-lift: %f\n", tnl))
+        write(f, @sprintf("lift: %f\n", tl))
+        close(f)
     end
 
-    #=
-    run_universal_improvement_experiment("data/bakery-5-25.txt")
-    run_universal_improvement_experiment("data/walmart-depts-5-25.txt")
-    run_universal_improvement_experiment("data/walmart-items-5-25.txt")
-    run_universal_improvement_experiment("data/lastfm-genres-5-25.txt")
-    run_universal_improvement_experiment("data/kosarak-5-25.txt")
-    =#
-    run_universal_improvement_experiment("data/instacart-5-25.txt")
+    run_universal_improvement_experiment("data/bakery-5-25-clean.txt")
+    run_universal_improvement_experiment("data/walmart-depts-5-25-clean.txt")
+    run_universal_improvement_experiment("data/walmart-items-5-25-clean.txt")
+    run_universal_improvement_experiment("data/lastfm-genres-5-25-clean.txt")
+    run_universal_improvement_experiment("data/kosarak-5-25-clean.txt")
+    run_universal_improvement_experiment("data/instacart-5-25-clean.txt")
 end
 
 universal_improvement_experiments()

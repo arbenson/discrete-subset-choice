@@ -413,7 +413,7 @@ function learn_utilities!(model::VariableChoiceModel, data::VariableChoiceDatase
         @show maximum(x)
     end
 
-    options = Optim.Options(show_trace=true, show_every=1, extended_trace=true)
+    options = Optim.Options(f_tol=1e-5, show_trace=true, show_every=1, extended_trace=true)
     #options = Optim.Options(f_tol=1e-6, f_calls_limit=25, show_trace=true)
     x0 = [copy(model.utilities); hotset_vals]
     res = optimize(neg_log_likelihood!, gradient!, x0,

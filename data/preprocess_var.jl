@@ -91,14 +91,12 @@ function apply_cutoffs(dataset::AbstractString, choice_size_cutoff::Int64, slate
         sort!(slate)
         choice = [get_id(k) for k in choice]
         sort!(choice)
-        sort!(slate)
-        sort!(choice)
         write(output, @sprintf("%s;%s\n", join(slate, " "), join(choice, " ")))
     end
 end
 
 function main()
-    #apply_cutoffs("yc-items.txt", 5, 15, 4, 8)
+    apply_cutoffs("yc-items.txt", 5, 15, 4, 8)
     apply_cutoffs("yc-cats.txt", 5, 15, 4, 8)    
 end
 

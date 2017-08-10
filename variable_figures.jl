@@ -25,8 +25,8 @@ function read_output(basename::AbstractString)
     mean_improvements = []
     std_improvements = []
     for lls in model_lls
-        improvements = exp.((lls - model_lls[1]) ./ num_fold_choices)
-        #improvements = lls ./ model_lls[1]
+        #improvements = exp.((lls - model_lls[1]) ./ num_fold_choices)
+        improvements = 100 * (lls - model_lls[1]) ./ abs(lls)
         push!(mean_improvements, mean(improvements))
         push!(std_improvements, std(improvements))            
     end
@@ -40,7 +40,7 @@ function variable_likelihood_gains_plot()
     #(hotset_sizes, means, stds) = read_output("yc-cats-3-10-4-8")
     #(hotset_sizes, means, stds) = read_output("yc-cats-5-15-4-8")
     #(hotset_sizes, means, stds) = read_output("yc-cats-5-5")
-    (hotset_sizes, means, stds) = read_output("yc-cats-5-10-4-8")
+    (hotset_sizes, means, stds) = read_output("yc-cats-5-15-4-8")
 
     @show means
     plot(hotset_sizes, means, ls="-", lw=2.5, label="YcCats")
