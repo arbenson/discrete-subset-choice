@@ -109,7 +109,8 @@ function log_likelihood(model::UniversalChoiceModel, subsets::Vector{NTuple}, co
 end
 
 
-function log_likelihood(model::UniversalChoiceModel, data::UniversalChoiceDataset)
+function log_likelihood(model::UniversalChoiceModel,
+                        data::UniversalChoiceDataset)
     subsets, counts = subsets_and_counts(data)
     return log_likelihood(model, subsets, counts)
 end

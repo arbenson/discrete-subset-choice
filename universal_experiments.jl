@@ -34,7 +34,7 @@ end
 
 function biggest_corrections(data::UniversalChoiceDataset, num_updates::Int64,
                              basename::AbstractString)
-    choices_to_add = top_choice_tups(data, num_updates)    
+    choices_to_add = top_choice_tups(data, num_updates)
     model = initialize_model(data)
     num_negative_corrections = Int64[]
     for choice in choices_to_add; add_to_hotset!(model, choice); end
@@ -59,7 +59,8 @@ function biggest_corrections(data::UniversalChoiceDataset, num_updates::Int64,
 end
 
 function universal_improvements_single(data::UniversalChoiceDataset, num_updates::Int64,
-                                       basename::AbstractString, update_type::AbstractString)
+                                       basename::AbstractString, update_type::AbstractString,
+                                       timing::Bool=false)
 
     # Vector for randomly splitting into training / test data
     n = length(data.sizes)
@@ -122,11 +123,15 @@ function universal_improvements_single(data::UniversalChoiceDataset, num_updates
     end
 
     for (i, choice) in enumerate(choices_to_add)
-        println(@sprintf("iteration %d of %d", i, num_updates))
         add_to_hotset!(model, choice)
-        log_likelihoods[i + 1] = log_likelihood(model, test_data)
+        if !timing;
+            println(@sprintf("iteration %d of %d", i, num_updates))
+            log_likelihoods[i + 1] = log_likelihood(model, test_data)
+        end
     end
-    
+    if timing; log_likelihoods[end] = log_likelihood(model, test_data) end
+
+    if timing; return; end
     if     update_type == "f";   output = open("output/$basename-single-freq.txt", "w")
     elseif update_type == "l";   output = open("output/$basename-single-lift.txt", "w")
     elseif update_type == "nl";  output = open("output/$basename-single-nlift.txt", "w")
@@ -273,35 +278,49 @@ function universal_improvements(data::UniversalChoiceDataset, num_updates::Int64
     end
 end
 
-
 function universal_improvement_experiments()
     function run_universal_improvement_experiment(dataset_file::AbstractString)
         data = read_data(dataset_file)
         basename = split(split(dataset_file, "/")[end], ".")[1]
         num_items = length(unique(data.choices))
-        num_updates = min(num_items, 500)
+        num_updates = min(num_items, 10000)
+        #universal_improvements_single(data, num_updates, basename, "f")        
+        universal_improvements_single(data, num_updates, basename, "nl")
+        #universal_improvements_single(data, num_updates, basename, "l")
+    end
+
+    function timing_experiment(dataset_file::AbstractString)
+        data = read_data(dataset_file)
+        basename = split(split(dataset_file, "/")[end], ".")[1]
+        num_items = length(unique(data.choices))        
+        num_updates = min(num_items, 10000)
+
+        # warmup
+        universal_improvements_single(data, num_updates, basename, "f", true)
+        # run
         tic()
-        universal_improvements_single(data, num_updates, basename, "f")
+        @time universal_improvements_single(data, num_updates, basename, "f", true)
         tf = toc()
-        tic()
-        @time universal_improvements_single(data, num_updates, basename, "nl")
-        tnl = toc()
-        tic()
-        @time universal_improvements_single(data, num_updates, basename, "l")
-        tl = toc()
         f = open("$basename-times.txt", "w")
         write(f, @sprintf("freq: %f\n", tf))
-        write(f, @sprintf("norm-lift: %f\n", tnl))
-        write(f, @sprintf("lift: %f\n", tl))
         close(f)
     end
 
-    run_universal_improvement_experiment("data/bakery-5-25-clean.txt")
-    run_universal_improvement_experiment("data/walmart-depts-5-25-clean.txt")
-    run_universal_improvement_experiment("data/walmart-items-5-25-clean.txt")
-    run_universal_improvement_experiment("data/lastfm-genres-5-25-clean.txt")
+    #=
+    timing_experiment("data/bakery-5-25-clean.txt")
+    timing_experiment("data/walmart-depts-5-25-clean.txt")
+    timing_experiment("data/walmart-items-5-25-clean.txt")
+    timing_experiment("data/lastfm-genres-5-25-clean.txt")
+    timing_experiment("data/kosarak-5-25-clean.txt")
+    timing_experiment("data/instacart-5-25-clean.txt")
+    =#
+    # run
+    #run_universal_improvement_experiment("data/bakery-5-25-clean.txt")
+    #run_universal_improvement_experiment("data/walmart-depts-5-25-clean.txt")
+    #run_universal_improvement_experiment("data/walmart-items-5-25-clean.txt")
+    #run_universal_improvement_experiment("data/lastfm-genres-5-25-clean.txt")
     run_universal_improvement_experiment("data/kosarak-5-25-clean.txt")
-    run_universal_improvement_experiment("data/instacart-5-25-clean.txt")
+    #run_universal_improvement_experiment("data/instacart-5-25-clean.txt")
 end
 
 universal_improvement_experiments()

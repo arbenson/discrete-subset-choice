@@ -25,12 +25,12 @@ function statistics(dataset::AbstractString)
 end
 
 function main()
-    statistics("bakery-5-25.txt")
-    statistics("walmart-items-5-25.txt")
-    statistics("walmart-depts-5-25.txt")
-    statistics("kosarak-5-25.txt")
-    statistics("lastfm-genres-5-25.txt")
-    statistics("instacart-5-25.txt")
+    statistics("bakery-5-25-clean.txt")
+    statistics("walmart-items-5-25-clean.txt")
+    statistics("walmart-depts-5-25-clean.txt")
+    statistics("kosarak-5-25-clean.txt")
+    statistics("lastfm-genres-5-25-clean.txt")
+    statistics("instacart-5-25-clean.txt")
 end
 
 main()
