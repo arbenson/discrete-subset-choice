@@ -7,11 +7,12 @@ This repository accompanies the paper
 
 ## Datasets
 
-Compute summary statistics of universal and variable choice set datasets (Tables
-1 and 4 in the paper).
-
+Compute summary statistics of universal choice set datasets (Table 1 in paper):
 ```
-cd data
 julia universal_statistics.jl
+```
+
+Compute summary statistics of variable choice set datasets (Table 1 in paper):
+```
 julia variable_statistics.jl
 ```

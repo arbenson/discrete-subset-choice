@@ -1,4 +1,5 @@
-include("../variable.jl")
+include("variable.jl")
+using VariableDSC
 
 function statistics(dataset_str::AbstractString)
     println("$dataset_str...")
@@ -10,8 +11,8 @@ function statistics(dataset_str::AbstractString)
 end
 
 function main()
-    statistics("yc-cats-5-10-4-8.txt")
-    statistics("yc-items-5-10-4-8.txt")
+    statistics("data/yc-cats-5-10-4-8.txt")
+    statistics("data/yc-items-5-10-4-8.txt")
 end
 
 main()

@@ -1,4 +1,6 @@
-include("../universal.jl")
+include("universal.jl")
+using UniversalDSC
+using StatsBase
 
 function statistics(dataset_str::AbstractString)
     println("$dataset_str...")
@@ -14,12 +16,12 @@ function statistics(dataset_str::AbstractString)
 end
 
 function main()
-    statistics("bakery-5-25.txt")
-    statistics("walmart-items-5-25.txt")
-    statistics("walmart-depts-5-25.txt")
-    statistics("kosarak-5-25.txt")
-    statistics("instacart-5-25.txt")
-    statistics("lastfm-genres-5-25.txt")
+    statistics("data/bakery-5-25.txt")
+    statistics("data/walmart-items-5-25.txt")
+    statistics("data/walmart-depts-5-25.txt")
+    statistics("data/kosarak-5-25.txt")
+    statistics("data/instacart-5-25.txt")
+    statistics("data/lastfm-genres-5-25.txt")
 end
 
 main()

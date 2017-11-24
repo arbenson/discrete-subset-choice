@@ -1,3 +1,7 @@
+module VariableDSC
+
+export read_data, add_to_hotset!, log_likelihood, learn_model!, learn_utilities!
+
 include("common.jl")
 using StatsBase
 using Optim
@@ -24,22 +28,6 @@ mutable struct VariableChoiceModel
     H::Dict{NTuple,Float64}
 end
 
-# Get the counts of every subset that is selected
-function get_subset_counts(data::VariableChoiceDataset)
-    # Get the counts
-    counts = Dict{NTuple, Int64}()
-    choice_inds = index_points(data.choice_sizes)
-    for i = 1:length(data.choice_sizes)
-        choice = data.choices[choice_inds[i]:(choice_inds[i + 1] - 1)]
-        choice_tup = vec2ntuple(choice)
-        if length(choice) > 1
-            if !haskey(counts, choice_tup); counts[choice_tup] = 0; end
-            counts[choice_tup] += 1
-        end
-    end
-    return counts
-end
-
 # Read text data
 function read_data(dataset::AbstractString)
     f = open(dataset)
@@ -61,29 +49,8 @@ function read_data(dataset::AbstractString)
     return VariableChoiceDataset(slate_sizes, slates, choice_sizes, choices)
 end
 
-# iterator over choices
-function iter_slates_choices(data::VariableChoiceDataset)
-    curr_slate_ind = 1
-    curr_choice_ind = 1
-    slate_vec = Vector{Vector{Int64}}()
-    choice_vec = Vector{Vector{Int64}}()
-    for (slate_size, choice_size) in zip(data.slate_sizes, data.choice_sizes)
-        slate = data.slates[curr_slate_ind:(curr_slate_ind + slate_size - 1)]
-        choice = data.choices[curr_choice_ind:(curr_choice_ind + choice_size - 1)]
-        push!(slate_vec, slate)
-        push!(choice_vec, choice)
-        curr_slate_ind += slate_size
-        curr_choice_ind += choice_size
-    end
-    assert(curr_slate_ind == length(data.slates) + 1)
-    assert(curr_choice_ind == length(data.choices) + 1 )          
-    return zip(data.slate_sizes, slate_vec, data.choice_sizes, choice_vec)
-end
-
 in_hotset(model::VariableChoiceModel, choice::Vector{Int64}) =
     haskey(model.H, vec2ntuple(choice))
-hotset_utility(model::VariableChoiceModel, choice::Vector{Int64}) =
-    model.H[vec2ntuple(choice)]
 hotset_val(model::VariableChoiceModel, choice::Vector{Int64}) =
     get(model.H, vec2ntuple(choice), 0.0)
 
@@ -99,7 +66,6 @@ function add_to_hotset!(model::VariableChoiceModel, choice_to_add::Vector{Int64}
     if in_hotset(model, choice_to_add); error("Choice already in hot set."); end
     set_hotset_value!(model, choice_to_add, 0.0)
 end
-
 
 # sum of exponential of subset-sum utilities for size-1 subsets 
 function sumexp_util1(model::VariableChoiceModel, slate::Vector{Int64})
@@ -468,3 +434,5 @@ function learn_model!(model::VariableChoiceModel, data::VariableChoiceDataset)
     learn_size_probs!(model, data)
     learn_utilities!(model, data)
 end
+
+end  # end module VariableDSC

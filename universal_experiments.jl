@@ -62,7 +62,6 @@ end
 function universal_improvements(data::UniversalChoiceDataset, num_updates::Int64,
                                 basename::AbstractString, update_type::AbstractString,
                                 timing::Bool=false)
-
     # Vector for randomly splitting into training / test data
     n = length(data.sizes)
     log_likelihoods = zeros(Float64, num_updates + 1)
@@ -171,7 +170,7 @@ function timing_experiments()
 end
 
 function universal_improvement_experiments()
-    function run_universal_improvement_experiment(dataset_file::AbstractString)
+    function run(dataset_file::AbstractString)
         data = read_data(dataset_file)
         basename = split(split(dataset_file, "/")[end], ".")[1]
         num_items = length(unique(data.choices))
@@ -181,10 +180,10 @@ function universal_improvement_experiments()
         universal_improvements(data, num_updates, basename, "l")
     end
 
-    run_universal_improvement_experiment("data/bakery-5-25-clean.txt")
-    run_universal_improvement_experiment("data/walmart-depts-5-25-clean.txt")
-    run_universal_improvement_experiment("data/walmart-items-5-25-clean.txt")
-    run_universal_improvement_experiment("data/lastfm-genres-5-25-clean.txt")
-    run_universal_improvement_experiment("data/kosarak-5-25-clean.txt")
-    run_universal_improvement_experiment("data/instacart-5-25-clean.txt")
+    run("data/bakery-5-25-clean.txt")
+    run("data/walmart-depts-5-25-clean.txt")
+    run("data/walmart-items-5-25-clean.txt")
+    run("data/lastfm-genres-5-25-clean.txt")
+    run("data/kosarak-5-25-clean.txt")
+    run("data/instacart-5-25-clean.txt")
 end

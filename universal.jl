@@ -1,3 +1,7 @@
+module UniversalDSC
+
+export get_subset_counts, read_data, iter_choices, in_hotset, log_likelihood, add_to_hotset!, initialize_model
+
 include("common.jl")
 using StatsBase
 
@@ -192,23 +196,6 @@ function add_to_hotset!(model::UniversalChoiceModel, choice_to_add::Vector{Int64
     model.gammas = normalization_values(length(model.gammas), model.H, model.probs)
 end
 
-function remove_from_hotset!(model::UniversalChoiceModel, choice_to_rm::Vector{Int64})
-    if !in_hotset(model, choice_to_rm); error("Choice not in hot set."); end
-
-    # Update hotset probability
-    choice_tup = vec2ntuple(choice_to_rm)
-    delete!(model.H, choice_tup)
-
-    # Update item counts and probability
-    choice_count = model.subset_counts[choice_tup]
-    for item in choice_to_rm; model.item_counts[item] += choice_count; end
-    total = sum(model.item_counts)
-    for (i, count) in enumerate(model.item_counts); model.probs[i] = count / total; end
-
-    # Update normalization parameters
-    model.gammas = normalization_values(length(model.gammas), model.H, model.probs)
-end
-
 function initialize_model(data::UniversalChoiceDataset)
     max_size = maximum(data.sizes)
 
@@ -226,9 +213,8 @@ function initialize_model(data::UniversalChoiceDataset)
     for (size, choice) in iter_choices(data)
         for item in choice; item_counts[item] += 1; end
     end
-    item_probs = zeros(Float64, length(item_counts))
     total = sum(item_counts)
-    for (i, count) in enumerate(item_counts); item_probs[i] = count / total; end
+    item_probs = item_counts / total
 
     # Initialize empty hotsets
     H = Dict{NTuple,Float64}()
@@ -242,3 +228,5 @@ function initialize_model(data::UniversalChoiceDataset)
     return UniversalChoiceModel(z, item_probs, gammas, H, item_counts,
                                 subset_counts, size_counts)
 end
+
+end  # end module UniversalDSC
