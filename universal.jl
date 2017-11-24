@@ -1,6 +1,5 @@
 include("common.jl")
 using StatsBase
-using Base.Threads
 
 # Represent a universal choice dataset as a vector of sizes (lengths of choices)
 # and a vector of all items in all choices.
@@ -93,7 +92,7 @@ hotset_prob(model::UniversalChoiceModel, choice::NTuple) = model.H[choice]
 function log_likelihood(model::UniversalChoiceModel, subsets::Vector{NTuple}, counts::Vector{Int64})
     ns = length(subsets)
     all_lls = zeros(Float64, ns)
-    Threads.@threads for i = 1:ns
+    for i = 1:ns
         choice = subsets[i]
         size = length(choice)
         ll = log(model.z[size])
@@ -185,7 +184,7 @@ function add_to_hotset!(model::UniversalChoiceModel, choice_to_add::Vector{Int64
     end
     
     total = sum(model.item_counts)
-    Threads.@threads for i = 1:length(model.item_counts)
+    for i = 1:length(model.item_counts)
         model.probs[i] = model.item_counts[i] / total
     end
 

@@ -58,8 +58,9 @@ function item_frequency_cutoff(data::VariableChoiceDataset, selected_cutoff::Int
                                  cutoff_choice_sizes, cutoff_choices)
 end
 
-function apply_cutoffs(dataset::AbstractString, choice_size_cutoff::Int64, slate_size_cutoff::Int64,
-                       selected_cutoff::Int64, total_cutoff::Int64)
+function apply_cutoffs(dataset::AbstractString, choice_size_cutoff::Int64,
+                       slate_size_cutoff::Int64, selected_cutoff::Int64,
+                       total_cutoff::Int64)
     @show dataset
     orig_data = read_data(dataset)
     @show length(orig_data.slate_sizes)
@@ -96,8 +97,8 @@ function apply_cutoffs(dataset::AbstractString, choice_size_cutoff::Int64, slate
 end
 
 function main()
-    apply_cutoffs("yc-items.txt", 5, 15, 4, 8)
-    apply_cutoffs("yc-cats.txt", 5, 15, 4, 8)    
+    #apply_cutoffs("yc-cats.txt", 5, 10, 4, 8)
+    apply_cutoffs("yc-items.txt", 5, 10, 4, 8)    
 end
 
 main()
