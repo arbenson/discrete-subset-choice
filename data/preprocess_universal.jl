@@ -59,25 +59,14 @@ function apply_cutoffs(dataset::AbstractString, size_cutoff::Int64, freq_cutoff:
         data = cutoff_data
     end
 
-    # write out results
-    basename = split(dataset, ".")[1]
-
-    item_map = Dict{Int64, Int64}()
-    function get_id(key::Int64)
-        if !haskey(item_map, key)
-            n = length(item_map) + 1
-            item_map[key] = n
-        end
-        return item_map[key]
-    end
-
-    # random permutation
+    # random permutation for the output
     out = [(size, choice) for (size, choice) in iter_choices(data)]
     shuffle!(out)
 
-    output = open("$basename-$size_cutoff-$freq_cutoff-clean.txt", "w")
+    # write out results
+    basename = split(dataset, ".")[1]
+    output = open("$basename-$size_cutoff-$freq_cutoff.txt", "w")
     for (size, choice) in out
-        choice = [get_id(c) for c in choice]
         sort!(choice)
         write(output, string(join(choice, ' '), "\n"))
     end
@@ -85,12 +74,13 @@ function apply_cutoffs(dataset::AbstractString, size_cutoff::Int64, freq_cutoff:
 end
 
 function main()
-    #apply_cutoffs("bakery.txt", 5, 25)
+    apply_cutoffs("bakery.txt", 5, 25)
     apply_cutoffs("walmart-items.txt", 5, 25)
     apply_cutoffs("walmart-depts.txt", 5, 25)
     apply_cutoffs("kosarak.txt", 5, 25)
-    #apply_cutoffs("instacart.txt", 5, 25)
-    #apply_cutoffs("lastfm-genres.txt", 5, 25)
+    apply_cutoffs("instacart.txt", 5, 25)
+    apply_cutoffs("lastfm-genres.txt", 5, 25)
 end
 
 main()
+

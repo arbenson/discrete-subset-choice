@@ -6,8 +6,8 @@ function top_choice_tups(data::UniversalChoiceDataset, num::Int64)
     return [collect(tup) for (count, tup) in counts[1:num]]
 end
 
-function negative_corrections(data::UniversalChoiceDataset, num_updates::Int64,
-                              basename::AbstractString)
+function negative_corrections_experiment(data::UniversalChoiceDataset, num_updates::Int64,
+                                         basename::AbstractString)
     choices_to_add = top_choice_tups(data, num_updates)
     model = initialize_model(data)
     num_negative_corrections = Int64[]
@@ -32,8 +32,8 @@ function negative_corrections(data::UniversalChoiceDataset, num_updates::Int64,
     end
 end
 
-function biggest_corrections(data::UniversalChoiceDataset, num_updates::Int64,
-                             basename::AbstractString)
+function biggest_corrections_experiment(data::UniversalChoiceDataset, num_updates::Int64,
+                                        basename::AbstractString)
     choices_to_add = top_choice_tups(data, num_updates)
     model = initialize_model(data)
     num_negative_corrections = Int64[]
@@ -58,10 +58,9 @@ function biggest_corrections(data::UniversalChoiceDataset, num_updates::Int64,
     end
 end
 
-function universal_improvements(data::UniversalChoiceDataset,
-                                num_updates::Int64,
-                                basename::AbstractString,
-                                update_type::AbstractString,
+
+function universal_improvements(data::UniversalChoiceDataset, num_updates::Int64,
+                                basename::AbstractString, update_type::AbstractString,
                                 timing::Bool=false)
 
     # Vector for randomly splitting into training / test data
@@ -95,7 +94,7 @@ function universal_improvements(data::UniversalChoiceDataset,
 
     choices_to_add = top_choice_tups(training_data, num_updates)
     if     update_type == "f"
-        # Frequency-based updates
+        # Keep frequency-based updates
     elseif update_type == "nl"
         # normalized lift-based updates
         lifts = Vector{Tuple{Float64,NTuple}}()
@@ -129,9 +128,13 @@ function universal_improvements(data::UniversalChoiceDataset,
             log_likelihoods[i + 1] = log_likelihood(model, test_data)
         end
     end
-    if timing; log_likelihoods[end] = log_likelihood(model, test_data) end
 
-    if timing; return; end
+    # If we are doing a timing experiment, we are done.
+    if timing
+        log_likelihoods[end] = log_likelihood(model, test_data)
+        return
+    end
+
     if     update_type == "f";   output = open("output/$basename-single-freq.txt", "w")
     elseif update_type == "l";   output = open("output/$basename-single-lift.txt", "w")
     elseif update_type == "nl";  output = open("output/$basename-single-nlift.txt", "w")
@@ -141,49 +144,47 @@ function universal_improvements(data::UniversalChoiceDataset,
     end
 end
 
-function universal_improvement_experiments()
-    function run_universal_improvement_experiment(dataset_file::AbstractString)
-        data = read_data(dataset_file)
-        basename = split(split(dataset_file, "/")[end], ".")[1]
-        num_items = length(unique(data.choices))
-        num_updates = min(num_items, 10000)
-        #universal_improvements_single(data, num_updates, basename, "f")        
-        universal_improvements_single(data, num_updates, basename, "nl")
-        #universal_improvements_single(data, num_updates, basename, "l")
-    end
-
-    function timing_experiment(dataset_file::AbstractString)
+function timing_experiments()
+    function run_experiment(dataset_file::AbstractString)
         data = read_data(dataset_file)
         basename = split(split(dataset_file, "/")[end], ".")[1]
         num_items = length(unique(data.choices))        
         num_updates = min(num_items, 10000)
 
         # warmup
-        universal_improvements_single(data, num_updates, basename, "f", true)
+        universal_improvements(data, num_updates, basename, "f", true)
         # run
         tic()
-        @time universal_improvements_single(data, num_updates, basename, "f", true)
+        @time universal_improvements(data, num_updates, basename, "f", true)
         tf = toc()
         f = open("$basename-times.txt", "w")
         write(f, @sprintf("freq: %f\n", tf))
         close(f)
     end
 
-    #=
     timing_experiment("data/bakery-5-25-clean.txt")
     timing_experiment("data/walmart-depts-5-25-clean.txt")
     timing_experiment("data/walmart-items-5-25-clean.txt")
     timing_experiment("data/lastfm-genres-5-25-clean.txt")
     timing_experiment("data/kosarak-5-25-clean.txt")
     timing_experiment("data/instacart-5-25-clean.txt")
-    =#
-    # run
-    #run_universal_improvement_experiment("data/bakery-5-25-clean.txt")
-    #run_universal_improvement_experiment("data/walmart-depts-5-25-clean.txt")
-    #run_universal_improvement_experiment("data/walmart-items-5-25-clean.txt")
-    #run_universal_improvement_experiment("data/lastfm-genres-5-25-clean.txt")
-    run_universal_improvement_experiment("data/kosarak-5-25-clean.txt")
-    #run_universal_improvement_experiment("data/instacart-5-25-clean.txt")
 end
 
-universal_improvement_experiments()
+function universal_improvement_experiments()
+    function run_universal_improvement_experiment(dataset_file::AbstractString)
+        data = read_data(dataset_file)
+        basename = split(split(dataset_file, "/")[end], ".")[1]
+        num_items = length(unique(data.choices))
+        num_updates = min(num_items, 10000)
+        universal_improvements(data, num_updates, basename, "f")        
+        universal_improvements(data, num_updates, basename, "nl")
+        universal_improvements(data, num_updates, basename, "l")
+    end
+
+    run_universal_improvement_experiment("data/bakery-5-25-clean.txt")
+    run_universal_improvement_experiment("data/walmart-depts-5-25-clean.txt")
+    run_universal_improvement_experiment("data/walmart-items-5-25-clean.txt")
+    run_universal_improvement_experiment("data/lastfm-genres-5-25-clean.txt")
+    run_universal_improvement_experiment("data/kosarak-5-25-clean.txt")
+    run_universal_improvement_experiment("data/instacart-5-25-clean.txt")
+end

@@ -77,17 +77,14 @@ function variable_model_freq_improvements(data::VariableChoiceDataset,
     end
 end
 
-function variable_model_frequency_experiments()
-    function run(dataset_file::AbstractString)
-        data = read_data(dataset_file)
-        basename = split(split(dataset_file, "/")[end], ".")[1]
-        num_items = length(unique(data.choices))
-        num_updates = min(num_items, 20)
-        variable_model_freq_improvements(data, num_updates, basename)
-    end
-
-    #run("data/yc-cats-5-10-4-8.txt")
-    run("data/yc-items-5-10-4-8.txt")    
+function run_variable_model_frequency_experiments()
+    data = read_data(dataset_file)
+    basename = split(split(dataset_file, "/")[end], ".")[1]
+    num_items = length(unique(data.choices))
+    num_updates = min(num_items, 20)
+    variable_model_freq_improvements(data, num_updates, basename)
 end
 
-variable_model_frequency_experiments()
+#run_variable_model_frequency_experiments("data/yc-cats-5-10-4-8.txt")
+#run_variable_model_frequency_experiments("data/yc-items-5-10-4-8.txt")    
+

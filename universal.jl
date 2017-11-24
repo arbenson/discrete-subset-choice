@@ -209,7 +209,6 @@ function remove_from_hotset!(model::UniversalChoiceModel, choice_to_rm::Vector{I
     model.gammas = normalization_values(length(model.gammas), model.H, model.probs)
 end
 
-
 function initialize_model(data::UniversalChoiceDataset)
     max_size = maximum(data.sizes)
 

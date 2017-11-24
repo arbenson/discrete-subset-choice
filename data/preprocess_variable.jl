@@ -97,7 +97,7 @@ function apply_cutoffs(dataset::AbstractString, choice_size_cutoff::Int64,
 end
 
 function main()
-    #apply_cutoffs("yc-cats.txt", 5, 10, 4, 8)
+    apply_cutoffs("yc-cats.txt", 5, 10, 4, 8)
     apply_cutoffs("yc-items.txt", 5, 10, 4, 8)    
 end
 
