@@ -6,30 +6,40 @@ function top_choice_tups(data::UniversalChoiceDataset, num::Int64)
     return [collect(tup) for (count, tup) in counts[1:num]]
 end
 
-function negative_corrections_experiment(data::UniversalChoiceDataset, num_updates::Int64,
-                                         basename::AbstractString)
-    choices_to_add = top_choice_tups(data, num_updates)
-    model = initialize_model(data)
-    num_negative_corrections = Int64[]
-    for (i, choice) in enumerate(choices_to_add)
-        println(@sprintf("iteration %d of %d", i, num_updates))
-        add_to_hotset!(model, choice)
-
-        # Get negative corrections
-        count = 0
-        for (subset, val) in model.H
-            separable_prob = prod([model.probs[item] for item in subset])
-            gamma = model.gammas[length(subset)]
-            correction = val - gamma * separable_prob
-            if correction < 0; count += 1; end
+function negative_corrections_experiments()
+    function run_experiment(basename::AbstractString)
+        println("$basename...")
+        data = read_data("data/$basename.txt")
+        num_updates = min(length(unique(data.choices)), 1000)
+        choices_to_add = top_choice_tups(data, num_updates)
+        model = initialize_model(data)
+        num_negative_corrections = Int64[]
+        for (i, choice) in enumerate(choices_to_add)
+            println(@sprintf("iteration %d of %d", i, num_updates))
+            add_to_hotset!(model, choice)
+            # Get negative corrections
+            count = 0
+            for (subset, val) in model.H
+                separable_prob = prod([model.probs[item] for item in subset])
+                gamma = model.gammas[length(subset)]
+                correction = val - gamma * separable_prob
+                if correction < 0; count += 1; end
+            end
+            push!(num_negative_corrections, count)
         end
-        push!(num_negative_corrections, count)
+        
+        output = open("output/$basename-freq-neg-corrections.txt", "w")
+        for (i, num) in enumerate(num_negative_corrections)
+            write(output, @sprintf("%d %d\n", i, num))
+        end
     end
 
-    output = open("output/$basename-freq-neg-corrections.txt", "w")
-    for (i, num) in enumerate(num_negative_corrections)
-        write(output, @sprintf("%d %d\n", i, num))
-    end
+    run_experiment("bakery-5-25")
+    run_experiment("walmart-depts-5-25")
+    run_experiment("walmart-items-5-25")
+    run_experiment("lastfm-genres-5-25")
+    run_experiment("kosarak-5-25")
+    run_experiment("instacart-5-25")
 end
 
 function biggest_corrections_experiment(data::UniversalChoiceDataset, num_updates::Int64,
@@ -57,7 +67,6 @@ function biggest_corrections_experiment(data::UniversalChoiceDataset, num_update
         write(output, @sprintf("%d:\t%s\t%f\n", i, join(data[ind][2], " "), data[ind][1]))
     end
 end
-
 
 function universal_improvements(data::UniversalChoiceDataset, num_updates::Int64,
                                 basename::AbstractString, update_type::AbstractString,
@@ -169,21 +178,20 @@ function timing_experiments()
     timing_experiment("data/instacart-5-25-clean.txt")
 end
 
-function universal_improvement_experiments()
-    function run(dataset_file::AbstractString)
-        data = read_data(dataset_file)
-        basename = split(split(dataset_file, "/")[end], ".")[1]
+function universal_likelihood_improvement_experiments()
+    function run_experiments(basename::AbstractString)
+        data = read_data("data/$basename.txt")
         num_items = length(unique(data.choices))
-        num_updates = min(num_items, 10000)
+        num_updates = min(length(unique(data.choices)), 1000)
         universal_improvements(data, num_updates, basename, "f")        
         universal_improvements(data, num_updates, basename, "nl")
         universal_improvements(data, num_updates, basename, "l")
     end
 
-    run("data/bakery-5-25-clean.txt")
-    run("data/walmart-depts-5-25-clean.txt")
-    run("data/walmart-items-5-25-clean.txt")
-    run("data/lastfm-genres-5-25-clean.txt")
-    run("data/kosarak-5-25-clean.txt")
-    run("data/instacart-5-25-clean.txt")
+    run_experiments("data/bakery-5-25-clean.txt")
+    run_experiments("data/walmart-depts-5-25-clean.txt")
+    run_experiments("data/walmart-items-5-25-clean.txt")
+    run_experiments("data/lastfm-genres-5-25-clean.txt")
+    run_experiments("data/kosarak-5-25-clean.txt")
+    run_experiments("data/instacart-5-25-clean.txt")
 end

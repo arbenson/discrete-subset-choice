@@ -2,6 +2,24 @@ include("../variable.jl")
 
 using DataStructures
 
+function iter_slates_choices(data::VariableChoiceDataset)
+    curr_slate_ind = 1
+    curr_choice_ind = 1
+    slate_vec = Vector{Vector{Int64}}()
+    choice_vec = Vector{Vector{Int64}}()
+    for (slate_size, choice_size) in zip(data.slate_sizes, data.choice_sizes)
+        slate = data.slates[curr_slate_ind:(curr_slate_ind + slate_size - 1)]
+        choice = data.choices[curr_choice_ind:(curr_choice_ind + choice_size - 1)]
+        push!(slate_vec, slate)
+        push!(choice_vec, choice)
+                curr_slate_ind += slate_size
+        curr_choice_ind += choice_size
+    end
+    assert(curr_slate_ind == length(data.slates) + 1)
+    assert(curr_choice_ind == length(data.choices) + 1 )
+    return zip(data.slate_sizes, slate_vec, data.choice_sizes, choice_vec)
+end
+
 function max_size_cutoff(data::VariableChoiceDataset, choice_size_cutoff::Int64, slate_size_cutoff::Int64)
     cutoff_slate_sizes = Int64[]
     cutoff_slates = Int64[]

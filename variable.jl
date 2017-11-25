@@ -1,7 +1,3 @@
-module VariableDSC
-
-export read_data, add_to_hotset!, log_likelihood, learn_model!, learn_utilities!
-
 include("common.jl")
 using StatsBase
 using Optim
@@ -434,5 +430,3 @@ function learn_model!(model::VariableChoiceModel, data::VariableChoiceDataset)
     learn_size_probs!(model, data)
     learn_utilities!(model, data)
 end
-
-end  # end module VariableDSC

@@ -1,5 +1,4 @@
 include("universal.jl")
-using UniversalDSC
 using StatsBase
 
 function statistics(dataset_str::AbstractString)

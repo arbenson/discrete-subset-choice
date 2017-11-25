@@ -1,5 +1,4 @@
 include("variable.jl")
-using VariableDSC
 
 function statistics(dataset_str::AbstractString)
     println("$dataset_str...")

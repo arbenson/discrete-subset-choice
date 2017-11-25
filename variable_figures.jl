@@ -37,5 +37,3 @@ function variable_likelihood_gains_plot()
     savefig("variable-gains.eps")
     show()
 end
-
-variable_likelihood_gains_plot()

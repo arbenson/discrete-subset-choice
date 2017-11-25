@@ -1,7 +1,3 @@
-module UniversalDSC
-
-export get_subset_counts, read_data, iter_choices, in_hotset, log_likelihood, add_to_hotset!, initialize_model
-
 include("common.jl")
 using StatsBase
 
@@ -228,5 +224,3 @@ function initialize_model(data::UniversalChoiceDataset)
     return UniversalChoiceModel(z, item_probs, gammas, H, item_counts,
                                 subset_counts, size_counts)
 end
-
-end  # end module UniversalDSC

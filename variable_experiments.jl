@@ -43,6 +43,7 @@ function variable_model_freq_improvements(data::VariableChoiceDataset,
     model = initialize_model(training_data)
     learn_model!(model, training_data)
     log_likelihoods[1] = log_likelihood(model, test_data)
+    @show model.z
     
     # Get subsets by frequency
     choice_inds = index_points(training_data.choice_sizes)
@@ -77,14 +78,10 @@ function variable_model_freq_improvements(data::VariableChoiceDataset,
     end
 end
 
-function run_variable_model_frequency_experiments()
-    data = read_data(dataset_file)
+function run_variable_model_experiments(dataset_file::AbstractString)
+    data = read_data("data/$dataset_file")
     basename = split(split(dataset_file, "/")[end], ".")[1]
     num_items = length(unique(data.choices))
-    num_updates = min(num_items, 20)
-    variable_model_freq_improvements(data, num_updates, basename)
+    variable_model_freq_improvements(data, 20, basename)
 end
-
-#run_variable_model_frequency_experiments("data/yc-cats-5-10-4-8.txt")
-#run_variable_model_frequency_experiments("data/yc-items-5-10-4-8.txt")    
 
