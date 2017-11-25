@@ -6,7 +6,7 @@ This repository accompanies the paper
 
 ## Universal choice sets
 
-Compute summary statistics of datasets (Table 1 in paper):
+Compute summary statistics of datasets (Table 1):
 ```
 julia universal_statistics.jl
 ```
@@ -29,7 +29,7 @@ julia> biggest_corrections_experiment("lastfm-genres-5-25")  # data for Table 3
 
 ## Variable choice sets
 
-Compute summary statistics of datasets (Table 4 in paper):
+Compute summary statistics of datasets (Table 4):
 ```
 julia variable_statistics.jl
 ```
@@ -48,4 +48,66 @@ julia> run_variable_model_experiments("yc-items-5-10-4-8.txt")
 ```
 
 ## Data
+
+The file `data/bakery.txt` contains the data for the bakery dataset (without any preprocessing).
+Each line of the file is a subset selection from the universal choice set, and the universal choice set consists of all items that appear in at least one subset selection.
+For example, the command `head data/bakery.txt` should produce the output
+```
+1 2
+3 1 4 5
+6 7 8
+9 10 11 12
+13 14 8
+15 16 17
+18 19 20 21
+15 6 22 17
+14 20 23 24 25
+26 5
+```
+The first subset selection is {1, 2}, the second is {3, 1, 4, 5}, etc.
+The file `data/bakery-5-25.txt` is a subset of `data/bakery.txt`, where all subset selections contain at most 5 items and all items appear in at least 25 subset selections.
+Replacing "bakery" with "instacart", "kosarak", "lastfm-genres", "walmart-depts", or "walmart-items" gives the other universal choice set datasets.
+The items in these datasets are codified by integers.
+The real items are provided for the walmart-depts, instacart, and lastfm-genres datasets.
+For example, running `head data/lastfm-genres-labels.txt` should give the output
+```
+1 rock
+2 seen_live
+3 indie
+4 alternative
+5 metal
+6 electronic
+7 punk
+8 pop
+9 indie_rock
+10 classic_rock
+```
+This means that item "1" in the lastfm-genres dataset corresponds to "rock", item "2" corresponds to "seen_live", etc.
+
+The file `data/yc-items.txt` contains the data for the YOOCHOOSE items dataset.
+Each line of the file consists of two parts---separated by a semicolon---representing the (variable) choice set and the subset selection.
+For example, the command `head data/yc-items.txt` should produce the output
+```
+30774 12821 3147;30774 3147
+16109 26266 26267 28460;28460 16109
+10590 2862 5051;2862
+7168 5121;5121
+1380 28325 26267 26264 23644;28325 26264
+1214 662 1313;662
+2867 3341 4754 1232 656;656 2867 3341
+40664 36424 36423 36421 36428 40656 28348 4836 30754 249 3465 182 705;36424 40664 36428 36421 36423 40656 4836 30754 249
+9673 59 122 7608 13340 13262 10626 501 3229 12407 7070;122 13340 13262 10626
+44589 44592 44617 44616 44141 44591 44621 44586 37878 44618 44631 40665 44620 45254 26266 815;44616 44586 37878 44141 45254 44620 26266
+```
+In this case, the first choice set is {30774, 12821, 3147} and the subset selection is {30774, 3147}.
+The set of items to the right of the semicolon (the subset selection) is always a subset of the items to the left of the semicolon (the choice set).
+
+The file `data/yc-items-5-10-4-8.txt` represents a subset of the original dataset where every subset selection is of
+size at most 5, every choice set is of size at most 10, every item is selected in a subset at least 4 times, and every
+item appears in a choice set at least 8 times.
+The experiments in the paper used this restricted dataset.
+
+Replacing "yc-items" with "yc-cats" gives the YOOCHOOSE categories dataset.
+
+
 
