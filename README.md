@@ -4,6 +4,10 @@ This repository accompanies the paper
 
 - Austin R. Benson, Ravi Kumar, and Andrew Tomkins. A Discrete Choice Model for Subset Selection. Proceedings of WSDM, 2018.
 
+We include Julia implementations of the algorithms and the datasets used in the paper.
+We also provide scripts for re-producing the figures and tables as well as re-producing the experimental results.
+
+
 ## Universal choice sets
 
 Compute summary statistics of datasets (Table 1):
@@ -18,7 +22,7 @@ julia> universal_likelihood_gains_plots()  # Figure 1
 julia> negative_corrections_plot()  # Figure 2
 ```
 
-Re-run experiments (for specific datasets):
+Re-run experiments (commands here for specific datasets):
 ```
 julia> include("universal_experiments.jl")
 julia> universal_likelihood_experiments("bakery-5-25")  # data for Figure 1
@@ -29,7 +33,7 @@ julia> biggest_corrections_experiment("lastfm-genres-5-25")  # data for Table 3
 
 ## Variable choice sets
 
-Compute summary statistics of datasets (Table 4):
+Compute summary statistics of datasets (most of Table 4):
 ```
 julia variable_statistics.jl
 ```
@@ -110,4 +114,42 @@ The experiments in the paper used this restricted dataset.
 Replacing "yc-items" with "yc-cats" gives the YOOCHOOSE categories dataset.
 
 
+### Citations for data
 
+If you use our discrete subset choice datasets, please cite our paper:
+```
+@inproceedings{Benson-2018-subset,
+title={A Discrete Choice Model for Subset Selection},
+author = {Benson, Austin R. and Kumar, Ravi and Tomkins, Andrew},
+booktitle={Proceedings of the eleventh ACM International Conference on Web Search and Data Mining},
+year={2018},
+organization={ACM}
+}
+```
+
+If you use the Instacart data, please also cite the following:
+```
+@misc{instacart-data,
+author={Instacart},
+title={{The Instacart Online Grocery Shopping Dataset}},
+howpublished={\url{https://www.instacart.com/datasets/grocery-shopping-2017}},
+year={2017}
+}
+```
+
+If you use the Lastfm data, please also cite the following
+```
+@misc{lastfm1k-data,
+title = {{Last.fm Dataset -- 1K users}},
+howpublished={\url{http://www.dtic.upf.edu/~ocelma/MusicRecommendationDataset/lastfm-1K.html}},
+author = {Celma, O.},
+year = {2010}
+}
+
+@misc{lastfmtags-data,
+title = {{LastFM-ArtistTags2007} dataset},
+howpublished = {\url{http://musicmachinery.com/2010/11/10/lastfm-artisttags2007/}},
+author = {Paul Lamere},
+year = {2008}
+}
+```
