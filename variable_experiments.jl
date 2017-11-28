@@ -43,7 +43,6 @@ function variable_model_freq_improvements(data::VariableChoiceDataset,
     model = initialize_model(training_data)
     learn_model!(model, training_data)
     log_likelihoods[1] = log_likelihood(model, test_data)
-    @show model.z
     
     # Get subsets by frequency
     choice_inds = index_points(training_data.choice_sizes)
@@ -65,11 +64,6 @@ function variable_model_freq_improvements(data::VariableChoiceDataset,
         add_to_H!(model, choice)
         learn_utilities!(model, training_data)
         log_likelihoods[i + 1] = log_likelihood(model, test_data)
-        ntest = length(test_data.choice_sizes)
-        ll_new  = log_likelihoods[i + 1]
-        ll_orig = log_likelihoods[1]
-        improve = exp((ll_new - ll_orig) / ntest)
-        @show ll_new, ll_orig, ntest, improve
     end
 
     output = open("output/$basename-freq.txt", "w")
