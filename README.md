@@ -7,7 +7,6 @@ This repository accompanies the paper
 We include Julia implementations of the algorithms and the datasets used in the paper.
 We also provide scripts for re-producing the figures and tables as well as re-producing the experimental results.
 
-
 ## Universal choice sets
 
 Compute summary statistics of datasets (Table 1):
@@ -29,6 +28,18 @@ julia> universal_likelihood_experiments("bakery-5-25")  # data for Figure 1
 julia> negative_corrections_experiment("walmart-items-5-25")  # data for Figure 2
 julia> timing_experiment("kosarak-5-25")  # data for Table 2
 julia> biggest_corrections_experiment("lastfm-genres-5-25")  # data for Table 3
+```
+
+Example usage of model:
+```
+julia> include("universal.jl")
+julia> data = read_data("data/bakery-5-25.txt")
+julia> for (size, choice) in iter_choices(data); println("$size, $choice"); end   # iterate over all subset selections
+julia> model = initialize_model(data)
+julia> model.probs[6]  # item probability of item 6
+julia> model.gammas  # normalization constants
+julia> add_to_H!(model, [6, 14, 24])  # add element to H
+julia> model.probs[6]
 ```
 
 ## Variable choice sets
