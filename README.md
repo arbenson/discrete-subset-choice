@@ -52,7 +52,7 @@ julia variable_statistics.jl
 Reproduce figures:
 ```
 julia> include("variable_figures.jl")
-julia> variable_likelihood_gains_plot()
+julia> variable_likelihood_gains_plot()  # Figure 3
 ```
 
 Re-run experiments:
