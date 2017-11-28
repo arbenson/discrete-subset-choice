@@ -2,7 +2,7 @@
 
 This repository accompanies the paper
 
-- Austin R. Benson, Ravi Kumar, and Andrew Tomkins. A Discrete Choice Model for Subset Selection. Proceedings of WSDM, 2018.
+- Austin R. Benson, Ravi Kumar, and Andrew Tomkins. A Discrete Choice Model for Subset Selection. Proceedings of the eleventh ACM International Conference on Web Search and Data Mining (WSDM), 2018.
 
 We include Julia implementations of the algorithms and the datasets used in the paper.
 We also provide scripts for re-producing the figures and tables as well as re-producing the experimental results.
@@ -132,7 +132,7 @@ If you use our discrete subset choice datasets, please cite our paper:
 @inproceedings{Benson-2018-subset,
 title={A Discrete Choice Model for Subset Selection},
 author = {Benson, Austin R. and Kumar, Ravi and Tomkins, Andrew},
-booktitle={Proceedings of the eleventh ACM International Conference on Web Search and Data Mining},
+booktitle={Proceedings of the eleventh ACM International Conference on Web Search and Data Mining (WSDM)},
 year={2018},
 organization={ACM}
 }
