@@ -71,7 +71,7 @@ function universal_improvements(data::UniversalChoiceDataset, num_updates::Int64
     end
 
     for (i, choice) in enumerate(choices_to_add)
-        add_to_hotset!(model, choice)
+        add_to_H!(model, choice)
         if !timing;
             println(@sprintf("iteration %d of %d", i, num_updates))
             log_likelihoods[i + 1] = log_likelihood(model, test_data)
@@ -103,7 +103,7 @@ function negative_corrections_experiment(basename::AbstractString)
     model = initialize_model(data)
     num_negative_corrections = Int64[]
     for (i, choice) in enumerate(choices_to_add)
-        add_to_hotset!(model, choice)
+        add_to_H!(model, choice)
         # Get negative corrections
         count = 0
         for (subset, val) in model.H
@@ -129,7 +129,7 @@ function biggest_corrections_experiment(basename::AbstractString)
     choices_to_add = most_freq_choice_tups(data, num_updates)
     model = initialize_model(data)
     num_negative_corrections = Int64[]
-    for choice in choices_to_add; add_to_hotset!(model, choice); end
+    for choice in choices_to_add; add_to_H!(model, choice); end
 
     results = []
     for (subset, val) in model.H

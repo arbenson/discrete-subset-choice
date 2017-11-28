@@ -84,10 +84,10 @@ function iter_choices(data::UniversalChoiceDataset)
     return zip(data.sizes, choice_vec)
 end
 
-in_hotset(model::UniversalChoiceModel, choice::Vector{Int64}) = haskey(model.H, vec2ntuple(choice))
-in_hotset(model::UniversalChoiceModel, choice::NTuple) = haskey(model.H, choice)
-hotset_prob(model::UniversalChoiceModel, choice::Vector{Int64}) = model.H[vec2ntuple(choice)]
-hotset_prob(model::UniversalChoiceModel, choice::NTuple) = model.H[choice]
+in_H(model::UniversalChoiceModel, choice::Vector{Int64}) = haskey(model.H, vec2ntuple(choice))
+in_H(model::UniversalChoiceModel, choice::NTuple) = haskey(model.H, choice)
+H_prob(model::UniversalChoiceModel, choice::Vector{Int64}) = model.H[vec2ntuple(choice)]
+H_prob(model::UniversalChoiceModel, choice::NTuple) = model.H[choice]
 
 function log_likelihood(model::UniversalChoiceModel, subsets::Vector{NTuple}, counts::Vector{Int64})
     ns = length(subsets)
@@ -96,8 +96,8 @@ function log_likelihood(model::UniversalChoiceModel, subsets::Vector{NTuple}, co
         choice = subsets[i]
         size = length(choice)
         ll = log(model.z[size])
-        if in_hotset(model, choice)
-            ll += log(hotset_prob(model, choice))
+        if in_H(model, choice)
+            ll += log(H_prob(model, choice))
         else
             ll += log(model.gammas[length(choice)])
             for item in choice; ll += log(model.probs[item]); end
@@ -118,29 +118,29 @@ function normalization_values(max_size::Int64, H::Dict{NTuple,Float64},
                               item_probs::Vector{Float64})
     gammas = zeros(Float64, max_size)
 
-    # No hotsets of size 1
+    # No sets of size 1.
     gammas[1] = 1
     
     base_probs = zeros(Float64, max_size)
-    hotset_probs = zeros(Float64, max_size)
+    H_probs = zeros(Float64, max_size)
     for (subset, val) in H
         ns = length(subset)
         base_probs[ns] += prod([item_probs[item] for item in subset])
-        hotset_probs[ns] += val
+        H_probs[ns] += val
     end
 
     if max_size == 1; return gammas; end
     # normalization for size-2 choice probabilities
     sum_pi2   = sum([p^2 for p in item_probs])
     sum_pipj  = (1 - sum_pi2) / 2
-    gammas[2] = (1 - hotset_probs[2]) / (sum_pipj + sum_pi2 - base_probs[2])
+    gammas[2] = (1 - H_probs[2]) / (sum_pipj + sum_pi2 - base_probs[2])
 
     if max_size == 2; return gammas; end    
     # normalization for size-3 choice probabilities
     sum_pi3    = sum([p^3 for p in item_probs])
     sum_pipjpj = sum_pi2 - sum_pi3
     sum_pipjpk = (1 - sum_pi3 - 3 * sum_pipjpj) / 6
-    gammas[3]  = (1 - hotset_probs[3]) / (sum_pipjpk + sum_pipjpj + sum_pi3 - base_probs[3])
+    gammas[3]  = (1 - H_probs[3]) / (sum_pipjpk + sum_pipjpj + sum_pi3 - base_probs[3])
 
     if max_size == 3; return gammas; end
     # normalization for size-4 choice probabilities
@@ -149,7 +149,7 @@ function normalization_values(max_size::Int64, H::Dict{NTuple,Float64},
     sum_pipj3    = sum_pi3 - sum_pi4
     sum_pipjpk2  = (sum_pi2 - sum_pi4 - 2 * sum_pipj3 - 2 * sum_pi2pj2) / 2    
     sum_pipjpkpl = (1 - sum_pi4 - 4 * sum_pipj3 - 6 * sum_pi2pj2 - 12 * sum_pipjpk2) / 24    
-    gammas[4]    = (1 - hotset_probs[4]) / (sum_pipjpkpl + sum_pi2pj2 + sum_pipj3 + sum_pipjpk2 + sum_pi4 - base_probs[4])
+    gammas[4]    = (1 - H_probs[4]) / (sum_pipjpkpl + sum_pi2pj2 + sum_pipj3 + sum_pipjpk2 + sum_pi4 - base_probs[4])
     
     if max_size == 4; return gammas; end
     # normalization for size-5 choice probabilities
@@ -160,7 +160,7 @@ function normalization_values(max_size::Int64, H::Dict{NTuple,Float64},
     sum_pipj2pk2   = (sum_pi2^2 - sum_pipj4 - 2 * sum_pi2pj3 - sum_pi5) / 2    
     sum_pipjpkpl2  = sum_pi2 * sum_pipjpk - sum_pipjpk3
     sum_pipjpkplpm = (1.0 - sum_pi5 - 5 * sum_pipj4 - 20 * sum_pipjpk3 - 60 * sum_pipjpkpl2 - 30 * sum_pipj2pk2 - 10 * sum_pi2pj3) / 120
-    gammas[5]      = (1 - hotset_probs[5]) / (sum_pipjpkplpm + sum_pi5 + sum_pipj4 + sum_pi2pj3 + sum_pipjpk3 + sum_pipjpkpl2 + sum_pipj2pk2 - base_probs[5])
+    gammas[5]      = (1 - H_probs[5]) / (sum_pipjpkplpm + sum_pi5 + sum_pipj4 + sum_pi2pj3 + sum_pipjpk3 + sum_pipjpkpl2 + sum_pipj2pk2 - base_probs[5])
     
     # TODO: support larger sizes.  We really shouldn't hard code the above.
     # There is a triangular system we can solve to automatically determine these
@@ -170,10 +170,10 @@ function normalization_values(max_size::Int64, H::Dict{NTuple,Float64},
     return gammas
 end
 
-function add_to_hotset!(model::UniversalChoiceModel, choice_to_add::Vector{Int64})
-    if in_hotset(model, choice_to_add); error("Choice already in hot set."); end
+function add_to_H!(model::UniversalChoiceModel, choice_to_add::Vector{Int64})
+    if in_H(model, choice_to_add); error("Choice already in hot set."); end
 
-    # Update hotset probability
+    # Update H probability
     choice_tup = vec2ntuple(choice_to_add)
     choice_count = model.subset_counts[choice_tup]
     model.H[choice_tup] = choice_count / model.size_counts[length(choice_to_add)]
@@ -212,7 +212,7 @@ function initialize_model(data::UniversalChoiceDataset)
     total = sum(item_counts)
     item_probs = item_counts / total
 
-    # Initialize empty hotsets
+    # Initialize empty Hs
     H = Dict{NTuple,Float64}()
 
     # Initialize normalization constants (gammas)

@@ -5,30 +5,30 @@ using PyPlot
 function negative_corrections_plot()
     function read_output(basename::AbstractString)
         f = open("output/$basename-freq-neg-corrections.txt")
-        hotset_sizes = Int64[]
+        H_sizes = Int64[]
         num_neg_corrections = Int64[]
         for line in eachline(f)
             sz, num = [parse(Int64, v) for v in split(line)]
-            push!(hotset_sizes, sz)
+            push!(H_sizes, sz)
             push!(num_neg_corrections, num)
         end
-        return (hotset_sizes, num_neg_corrections)        
+        return (H_sizes, num_neg_corrections)        
     end
 
     PyPlot.pygui(true)
 
-    (hotset_sizes, num_neg_corrections) = read_output("bakery-5-25")
-    semilogx(hotset_sizes, num_neg_corrections ./ hotset_sizes, ls="--", lw=7, label="Bakery")
-    (hotset_sizes, num_neg_corrections) = read_output("walmart-items-5-25")
-    semilogx(hotset_sizes, num_neg_corrections ./ hotset_sizes, ls=":", lw=5, label="WalmartItems")    
-    (hotset_sizes, num_neg_corrections) = read_output("walmart-depts-5-25") 
-    semilogx(hotset_sizes, num_neg_corrections ./ hotset_sizes, ls=":", lw=3, label="WalmartDepts")
-    (hotset_sizes, num_neg_corrections) = read_output("lastfm-genres-5-25")
-    semilogx(hotset_sizes, num_neg_corrections ./ hotset_sizes, ls="-", lw=2.5, label="LastfmGenres")
-    (hotset_sizes, num_neg_corrections) = read_output("kosarak-5-25")
-    semilogx(hotset_sizes, num_neg_corrections ./ hotset_sizes, ls="-", lw=1.75, label="Kosarak")
-    (hotset_sizes, num_neg_corrections) = read_output("instacart-5-25")
-    semilogx(hotset_sizes, num_neg_corrections ./ hotset_sizes, ls="-", lw=1, label="Instacart")    
+    (H_sizes, num_neg_corrections) = read_output("bakery-5-25")
+    semilogx(H_sizes, num_neg_corrections ./ H_sizes, ls="--", lw=7, label="Bakery")
+    (H_sizes, num_neg_corrections) = read_output("walmart-items-5-25")
+    semilogx(H_sizes, num_neg_corrections ./ H_sizes, ls=":", lw=5, label="WalmartItems")    
+    (H_sizes, num_neg_corrections) = read_output("walmart-depts-5-25") 
+    semilogx(H_sizes, num_neg_corrections ./ H_sizes, ls=":", lw=3, label="WalmartDepts")
+    (H_sizes, num_neg_corrections) = read_output("lastfm-genres-5-25")
+    semilogx(H_sizes, num_neg_corrections ./ H_sizes, ls="-", lw=2.5, label="LastfmGenres")
+    (H_sizes, num_neg_corrections) = read_output("kosarak-5-25")
+    semilogx(H_sizes, num_neg_corrections ./ H_sizes, ls="-", lw=1.75, label="Kosarak")
+    (H_sizes, num_neg_corrections) = read_output("instacart-5-25")
+    semilogx(H_sizes, num_neg_corrections ./ H_sizes, ls="-", lw=1, label="Instacart")    
 
     fsz = 18  # font size
     legend(frameon=false, fontsize=fsz-4, loc="upper right")    
@@ -44,19 +44,19 @@ end
 
 function universal_likelihood_gains_plots()
     function read_output(basename::AbstractString, filename::AbstractString)
-        hotset_sizes = Int64[]
+        H_sizes = Int64[]
         model_lls = Float64[]
         f = open(filename)
         for line in eachline(f)
             exp_data = split(line)
-            push!(hotset_sizes, parse(Int64, exp_data[1]))
+            push!(H_sizes, parse(Int64, exp_data[1]))
             push!(model_lls, parse(Float64, exp_data[2]))
         end
         close(f)
         data = read_data("data/$basename.txt")
         n = length(data.sizes)
         ntest = n - convert(Int64, floor(0.8 * n))
-        return (hotset_sizes, model_lls, ntest)
+        return (H_sizes, model_lls, ntest)
     end
 
     function make_plot(basename::AbstractString, titlename::AbstractString)

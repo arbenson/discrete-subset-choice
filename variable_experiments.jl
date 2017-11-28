@@ -62,7 +62,7 @@ function variable_model_freq_improvements(data::VariableChoiceDataset,
 
     for (i, choice) in enumerate(choices_to_add)
         println(@sprintf("iteration %d of %d", i, num_updates))
-        add_to_hotset!(model, choice)
+        add_to_H!(model, choice)
         learn_utilities!(model, training_data)
         log_likelihoods[i + 1] = log_likelihood(model, test_data)
         ntest = length(test_data.choice_sizes)
@@ -84,4 +84,3 @@ function run_variable_model_experiments(dataset_file::AbstractString)
     num_items = length(unique(data.choices))
     variable_model_freq_improvements(data, 20, basename)
 end
-

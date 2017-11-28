@@ -45,22 +45,22 @@ function read_data(dataset::AbstractString)
     return VariableChoiceDataset(slate_sizes, slates, choice_sizes, choices)
 end
 
-in_hotset(model::VariableChoiceModel, choice::Vector{Int64}) =
+in_H(model::VariableChoiceModel, choice::Vector{Int64}) =
     haskey(model.H, vec2ntuple(choice))
-hotset_val(model::VariableChoiceModel, choice::Vector{Int64}) =
+H_val(model::VariableChoiceModel, choice::Vector{Int64}) =
     get(model.H, vec2ntuple(choice), 0.0)
 
-function set_hotset_value!(model::VariableChoiceModel, choice::Vector{Int64}, val::Float64)
+function set_H_value!(model::VariableChoiceModel, choice::Vector{Int64}, val::Float64)
     model.H[vec2ntuple(choice)] = val
 end
 
-function set_hotset_value!(model::VariableChoiceModel, choice::NTuple, val::Float64)
+function set_H_value!(model::VariableChoiceModel, choice::NTuple, val::Float64)
     model.H[choice] = val
 end
 
-function add_to_hotset!(model::VariableChoiceModel, choice_to_add::Vector{Int64})
-    if in_hotset(model, choice_to_add); error("Choice already in hot set."); end
-    set_hotset_value!(model, choice_to_add, 0.0)
+function add_to_H!(model::VariableChoiceModel, choice_to_add::Vector{Int64})
+    if in_H(model, choice_to_add); error("Choice already in hot set."); end
+    set_H_value!(model, choice_to_add, 0.0)
 end
 
 # sum of exponential of subset-sum utilities for size-1 subsets 
@@ -85,7 +85,7 @@ function sumexp_util2(model::VariableChoiceModel, slate::Vector{Int64})
         si = utils[i]
         for j = i:ns
             subset[2] = slate[j]
-            sj = si + utils[j] + hotset_val(model, subset)
+            sj = si + utils[j] + H_val(model, subset)
             total += exp(sj)
         end
     end
@@ -106,7 +106,7 @@ function sumexp_util3(model::VariableChoiceModel, slate::Vector{Int64})
             sj = si + utils[j]
             for k = j:ns
                 subset[3] = slate[k]
-                sk = sj + utils[k] + hotset_val(model, subset)
+                sk = sj + utils[k] + H_val(model, subset)
                 total += exp(sk)
             end
         end
@@ -131,7 +131,7 @@ function sumexp_util4(model::VariableChoiceModel, slate::Vector{Int64})
                 sk = sj + utils[k]
                 for l = k:ns
                     subset[4] = slate[l]
-                    sl = sk + utils[l] + hotset_val(model, subset)
+                    sl = sk + utils[l] + H_val(model, subset)
                     total += exp(sl)
                 end
             end
@@ -160,7 +160,7 @@ function sumexp_util5(model::VariableChoiceModel, slate::Vector{Int64})
                     sl = sk + utils[l]
                     for m = l:ns
                         subset[5] = slate[m]
-                        sm = sl + utils[m] + hotset_val(model, subset)
+                        sm = sl + utils[m] + H_val(model, subset)
                         total += exp(sm)
                     end
                 end
@@ -182,7 +182,7 @@ function gradient_update1!(model::VariableChoiceModel, slate::Vector{Int64},
 end
 
 function gradient_update2!(model::VariableChoiceModel, slate::Vector{Int64},
-                           grad::Vector{Float64}, hotset_inds::Dict{NTuple, Int64})
+                           grad::Vector{Float64}, H_inds::Dict{NTuple, Int64})
     sum = sumexp_util2(model, slate)
     assert(!isnan(sum))    
     ns = length(slate)
@@ -193,17 +193,17 @@ function gradient_update2!(model::VariableChoiceModel, slate::Vector{Int64},
         si = model.utilities[i]
         for j = i:ns
             subset[2] = slate[j]
-            sj = si + utils[j] + hotset_val(model, subset)
+            sj = si + utils[j] + H_val(model, subset)
             for elmt in subset; grad[elmt] += exp(sj) / sum; end
-            if in_hotset(model, subset)
-                grad[hotset_inds[vec2ntuple(subset)]] += exp(sj) / sum
+            if in_H(model, subset)
+                grad[H_inds[vec2ntuple(subset)]] += exp(sj) / sum
             end
         end
     end
 end
 
 function gradient_update3!(model::VariableChoiceModel, slate::Vector{Int64},
-                           grad::Vector{Float64}, hotset_inds::Dict{NTuple, Int64})
+                           grad::Vector{Float64}, H_inds::Dict{NTuple, Int64})
     sum = sumexp_util3(model, slate)
     assert(!isnan(sum))    
     ns = length(slate)
@@ -217,10 +217,10 @@ function gradient_update3!(model::VariableChoiceModel, slate::Vector{Int64},
             sj = si + utils[j]
             for k = j:ns
                 subset[3] = slate[k]
-                sk = sj + utils[k] + hotset_val(model, subset)
+                sk = sj + utils[k] + H_val(model, subset)
                 for elmt in subset; grad[elmt] += exp(sk) / sum; end
-                if in_hotset(model, subset)
-                    grad[hotset_inds[vec2ntuple(subset)]] += exp(sk) / sum
+                if in_H(model, subset)
+                    grad[H_inds[vec2ntuple(subset)]] += exp(sk) / sum
                 end
             end
         end
@@ -228,7 +228,7 @@ function gradient_update3!(model::VariableChoiceModel, slate::Vector{Int64},
 end
 
 function gradient_update4!(model::VariableChoiceModel, slate::Vector{Int64},
-                           grad::Vector{Float64}, hotset_inds::Dict{NTuple, Int64})
+                           grad::Vector{Float64}, H_inds::Dict{NTuple, Int64})
     sum = sumexp_util4(model, slate)
     assert(!isnan(sum))    
     ns = length(slate)
@@ -245,10 +245,10 @@ function gradient_update4!(model::VariableChoiceModel, slate::Vector{Int64},
                 sk = sj + utils[k]
                 for l = k:ns
                     subset[4] = slate[l]
-                    sl = sk + utils[l] + hotset_val(model, subset)
+                    sl = sk + utils[l] + H_val(model, subset)
                     for elmt in subset; grad[elmt] += exp(sl) / sum; end
-                    if in_hotset(model, subset)
-                        grad[hotset_inds[vec2ntuple(subset)]] += exp(sl) / sum
+                    if in_H(model, subset)
+                        grad[H_inds[vec2ntuple(subset)]] += exp(sl) / sum
                     end
                 end
             end
@@ -257,7 +257,7 @@ function gradient_update4!(model::VariableChoiceModel, slate::Vector{Int64},
 end
 
 function gradient_update5!(model::VariableChoiceModel, slate::Vector{Int64},
-                           grad::Vector{Float64}, hotset_inds::Dict{NTuple, Int64})
+                           grad::Vector{Float64}, H_inds::Dict{NTuple, Int64})
     sum = sumexp_util5(model, slate)
     assert(!isnan(sum))
     ns = length(slate)
@@ -277,10 +277,10 @@ function gradient_update5!(model::VariableChoiceModel, slate::Vector{Int64},
                     sl = sk + utils[l]
                     for m = l:ns
                         subset[5] = slate[m]
-                        sm = sl + utils[m] + hotset_val(model, subset)
+                        sm = sl + utils[m] + H_val(model, subset)
                         for elmt in subset; grad[elmt] += exp(sm) / sum; end
-                        if in_hotset(model, subset)
-                            grad[hotset_inds[vec2ntuple(subset)]] += exp(sm) / sum
+                        if in_H(model, subset)
+                            grad[H_inds[vec2ntuple(subset)]] += exp(sm) / sum
                         end
                     end
                 end
@@ -303,12 +303,12 @@ function sumexp_util(model::VariableChoiceModel, slate::Vector{Int64}, size::Int
 end
 
 function update_gradient_from_slate!(model::VariableChoiceModel, grad::Vector{Float64}, slate::Vector{Int64},
-                                     choice_size::Int64, hotset_inds::Dict{NTuple, Int64})
+                                     choice_size::Int64, H_inds::Dict{NTuple, Int64})
     if     choice_size == 1; gradient_update1!(model, slate, grad)
-    elseif choice_size == 2; gradient_update2!(model, slate, grad, hotset_inds)
-    elseif choice_size == 3; gradient_update3!(model, slate, grad, hotset_inds)
-    elseif choice_size == 4; gradient_update4!(model, slate, grad, hotset_inds)
-    elseif choice_size == 5; gradient_update5!(model, slate, grad, hotset_inds)
+    elseif choice_size == 2; gradient_update2!(model, slate, grad, H_inds)
+    elseif choice_size == 3; gradient_update3!(model, slate, grad, H_inds)
+    elseif choice_size == 4; gradient_update4!(model, slate, grad, H_inds)
+    elseif choice_size == 5; gradient_update5!(model, slate, grad, H_inds)
     else error(@sprintf("Cannot handle size %d", choice_size))
     end
 end
@@ -325,7 +325,7 @@ function log_likelihood(model::VariableChoiceModel, data::VariableChoiceDataset)
         max_ind = min(length(model.z), length(slate) - 1)
         ll[i] += log(model.z[size] / sum(model.z[1:max_ind]))
         for item in choice; ll[i] += model.utilities[item]; end
-        ll[i] += hotset_val(model, choice)
+        ll[i] += H_val(model, choice)
         ll[i] -= log(sumexp_util(model, slate, size))
     end
     return sum(ll)
@@ -333,21 +333,21 @@ end
 
 function learn_utilities!(model::VariableChoiceModel, data::VariableChoiceDataset)
     n_items = length(model.utilities)
-    hotset_tups = Vector{NTuple}()
-    hotset_inds = Dict{NTuple, Int64}()
-    hotset_vals = Float64[]
+    H_tups = Vector{NTuple}()
+    H_inds = Dict{NTuple, Int64}()
+    H_vals = Float64[]
     for (tup, val) in model.H
-        push!(hotset_tups, tup)
-        hotset_inds[tup] = n_items + length(hotset_tups)
-        push!(hotset_vals, val)
+        push!(H_tups, tup)
+        H_inds[tup] = n_items + length(H_tups)
+        push!(H_vals, val)
     end
     
     function update_model!(x::Vector{Float64})
-        # Vector x contains item utilities and hotset utilities
+        # Vector x contains item utilities and H utilities
         x[find(isnan.(x))] = 0.0
         model.utilities = copy(x[1:n_items])
-        for (tup, val) in zip(hotset_tups, x[(n_items + 1):end])
-            set_hotset_value!(model, tup, val)
+        for (tup, val) in zip(H_tups, x[(n_items + 1):end])
+            set_H_value!(model, tup, val)
         end
     end
 
@@ -366,10 +366,10 @@ function learn_utilities!(model::VariableChoiceModel, data::VariableChoiceDatase
             choice = data.choices[choice_inds[i]:(choice_inds[i + 1] - 1)]
             size = length(choice)
             for item in choice; grad[item] -= 1; end
-            if in_hotset(model, choice)
-                grad[hotset_inds[vec2ntuple(choice)]] -= 1
+            if in_H(model, choice)
+                grad[H_inds[vec2ntuple(choice)]] -= 1
             end
-            update_gradient_from_slate!(model, grad, slate, size, hotset_inds) 
+            update_gradient_from_slate!(model, grad, slate, size, H_inds) 
         end
         # scale the gradient because the exponentials can get too large
         gnorm = norm(grad, 2)
@@ -381,7 +381,7 @@ function learn_utilities!(model::VariableChoiceModel, data::VariableChoiceDatase
 
     options = Optim.Options(f_tol=1e-3, show_trace=true, show_every=1,
                             extended_trace=true, f_calls_limit=25)
-    x0 = [copy(model.utilities); hotset_vals]
+    x0 = [copy(model.utilities); H_vals]
     res = optimize(neg_log_likelihood!, gradient!, x0,
                    LBFGS(; linesearch=LineSearches.BackTracking()), options)
     update_model!(res.minimizer)
