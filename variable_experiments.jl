@@ -78,7 +78,7 @@ function variable_model_freq_improvements(data::VariableChoiceDataset,
     end
 end
 
-function run_variable_model_experiments(dataset_file::AbstractString)
+function variable_likelihood_experiment(dataset_file::AbstractString)
     data = read_data("data/$dataset_file")
     basename = split(split(dataset_file, "/")[end], ".")[1]
     num_items = length(unique(data.choices))

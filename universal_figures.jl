@@ -16,6 +16,7 @@ function negative_corrections_plot()
     end
 
     PyPlot.pygui(true)
+    figure()
 
     (H_sizes, num_neg_corrections) = read_output("bakery-5-25")
     semilogx(H_sizes, num_neg_corrections ./ H_sizes, ls="--", lw=7, label="Bakery")

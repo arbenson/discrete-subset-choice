@@ -58,8 +58,8 @@ julia> variable_likelihood_gains_plot()  # Figure 3
 Re-run experiments:
 ```
 julia> include("variable_experiments.jl")
-julia> run_variable_model_experiments("yc-cats-5-10-4-8.txt")
-julia> run_variable_model_experiments("yc-items-5-10-4-8.txt")
+julia> variable_likelihood_experiment("yc-cats-5-10-4-8.txt")
+julia> variable_likelihood_experiment("yc-items-5-10-4-8.txt")
 ```
 
 ## Data

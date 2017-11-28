@@ -22,6 +22,7 @@ end
 
 function variable_likelihood_gains_plot()
     PyPlot.pygui(true)
+    figure()
     (H_sizes, improvements) = read_output("yc-cats-5-10-4-8")
     plot(H_sizes, improvements, ls="-",  lw=2.5,  color="#1b9e77", label="YcCats")
     (H_sizes, improvements) = read_output("yc-items-5-10-4-8")
