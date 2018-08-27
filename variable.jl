@@ -1,6 +1,7 @@
 include("common.jl")
-using StatsBase
 using Optim
+using Printf
+using StatsBase
 
 # Represent a variable choice dataset as a vector of slate sizes, a vector of
 # all slates, a vector of choice set sizes, and a vector of all choices.
@@ -173,7 +174,7 @@ end
 function gradient_update1!(model::VariableChoiceModel, slate::Vector{Int64},
                            grad::Vector{Float64})
     sum = sumexp_util1(model, slate)
-    assert(!isnan(sum))
+    if isnan(sum); error("Sum is NaN"); end
     ns = length(slate)
     utils = [model.utilities[s] for s in slate]        
     for i = 1:ns
@@ -184,7 +185,7 @@ end
 function gradient_update2!(model::VariableChoiceModel, slate::Vector{Int64},
                            grad::Vector{Float64}, H_inds::Dict{NTuple, Int64})
     sum = sumexp_util2(model, slate)
-    assert(!isnan(sum))    
+    if isnan(sum); error("Sum is NaN"); end    
     ns = length(slate)
     subset = [0, 0]
     utils = [model.utilities[s] for s in slate]    
@@ -205,7 +206,7 @@ end
 function gradient_update3!(model::VariableChoiceModel, slate::Vector{Int64},
                            grad::Vector{Float64}, H_inds::Dict{NTuple, Int64})
     sum = sumexp_util3(model, slate)
-    assert(!isnan(sum))    
+    if isnan(sum); error("Sum is NaN"); end    
     ns = length(slate)
     subset = [0, 0, 0]
     utils = [model.utilities[s] for s in slate]    
@@ -230,7 +231,7 @@ end
 function gradient_update4!(model::VariableChoiceModel, slate::Vector{Int64},
                            grad::Vector{Float64}, H_inds::Dict{NTuple, Int64})
     sum = sumexp_util4(model, slate)
-    assert(!isnan(sum))    
+    if isnan(sum); error("Sum is NaN"); end    
     ns = length(slate)
     subset = [0, 0, 0, 0]
     utils = [model.utilities[s] for s in slate]    
@@ -259,7 +260,7 @@ end
 function gradient_update5!(model::VariableChoiceModel, slate::Vector{Int64},
                            grad::Vector{Float64}, H_inds::Dict{NTuple, Int64})
     sum = sumexp_util5(model, slate)
-    assert(!isnan(sum))
+    if isnan(sum); error("Sum is NaN"); end
     ns = length(slate)
     subset = [0, 0, 0, 0, 0]
     utils = [model.utilities[s] for s in slate]    

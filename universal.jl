@@ -80,7 +80,9 @@ function iter_choices(data::UniversalChoiceDataset)
         push!(choice_vec, choice)
         curr_ind += size
     end
-    assert(curr_ind == length(data.choices) + 1)
+    if curr_ind != length(data.choices) + 1
+        error("Indices do not match up")
+    end
     return zip(data.sizes, choice_vec)
 end
 

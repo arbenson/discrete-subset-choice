@@ -1,4 +1,5 @@
 include("universal.jl")
+using Printf
 
 # Get the num most frequent choices.
 function most_freq_choice_tups(data::UniversalChoiceDataset, num::Int64)
@@ -161,9 +162,7 @@ function timing_experiment(basename::AbstractString)
     # warmup
     universal_improvements(data, num_updates, basename, "f", true)
     # run
-    tic()
-    @time universal_improvements(data, num_updates, basename, "f", true)
-    tf = toc()
+    tf = @elapsed universal_improvements(data, num_updates, basename, "f", true)
     open("output/$basename-times.txt", "w") do f
         write(f, @sprintf("freq: %f\n", tf))
     end
@@ -181,7 +180,7 @@ function universal_likelihood_experiments(basename::AbstractString)
     println("normalized lift heuristic...")        
     universal_improvements(data, num_updates, basename, "nl")
 end
-
+;
 
 # timing_experiment("kosarak-5-25")
 # biggest_corrections_experiment("lastfm-genres-5-25")

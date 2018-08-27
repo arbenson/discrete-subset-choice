@@ -35,7 +35,7 @@ function negative_corrections_plot()
     legend(frameon=false, fontsize=fsz-4, loc="upper right")    
     xlabel("Number of corrections", fontsize=fsz)
     ylabel("Fraction negative corrections", fontsize=fsz)
-    ax = axes()    
+    ax = PyPlot.axes()    
     ax[:tick_params]("both", labelsize=fsz-4, length=8, width=2)
     ax[:tick_params]("both", which="minor", length=4, width=1)
     tight_layout()
@@ -67,7 +67,7 @@ function universal_likelihood_gains_plots()
 
         base_ll = freq_lls[1]
         ntest = freq_ntest
-        norm_ll(lls::Vector{Float64}) = exp.((lls - base_ll) / ntest)
+        norm_ll(lls::Vector{Float64}) = exp.((lls .- base_ll) ./ ntest)
 
         PyPlot.pygui(true)
         figure()
@@ -87,7 +87,7 @@ function universal_likelihood_gains_plots()
         if titlename == "Bakery"
             legend(frameon=false, fontsize=fsz, loc=(0.57, 0.42))
         end
-        ax = axes()
+        ax = PyPlot.axes()
         ax[:tick_params]("both", labelsize=fsz-4, length=8, width=2) 
         xlabel("Number of corrections", fontsize=fsz)
         ylabel("Mean per-choice likelihood gain", fontsize=fsz)
@@ -104,3 +104,4 @@ function universal_likelihood_gains_plots()
     make_plot("instacart-5-25",     "Instacart")
     make_plot("kosarak-5-25",       "Kosarak")
 end
+;

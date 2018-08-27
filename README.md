@@ -14,52 +14,54 @@ Compute summary statistics of datasets (Table 1):
 julia universal_statistics.jl
 ```
 
-Reproduce figures:
-```
-julia> include("universal_figures.jl")
-julia> universal_likelihood_gains_plots()  # Figure 1
-julia> negative_corrections_plot()  # Figure 2
+Reproduce figures (in the Julia REPL):
+```julia
+include("universal_figures.jl")
+universal_likelihood_gains_plots()  # Figure 1
+negative_corrections_plot()  # Figure 2
 ```
 
-Re-run experiments (commands here for specific datasets):
-```
-julia> include("universal_experiments.jl")
-julia> universal_likelihood_experiments("bakery-5-25")  # data for Figure 1
-julia> negative_corrections_experiment("walmart-items-5-25")  # data for Figure 2
-julia> timing_experiment("kosarak-5-25")  # data for Table 2
-julia> biggest_corrections_experiment("lastfm-genres-5-25")  # data for Table 3
+Re-run experiments (commands here for specific datasets and to be run in the Julia REPL):
+```julia
+include("universal_experiments.jl")
+universal_likelihood_experiments("bakery-5-25")  # data for Figure 1
+negative_corrections_experiment("walmart-items-5-25")  # data for Figure 2
+timing_experiment("kosarak-5-25")  # data for Table 2
+biggest_corrections_experiment("lastfm-genres-5-25")  # data for Table 3
 ```
 
 Example usage of model:
-```
-julia> include("universal.jl")
-julia> data = read_data("data/bakery-5-25.txt")
-julia> for (size, choice) in iter_choices(data); println("$size, $choice"); end   # iterate over all subset selections
-julia> model = initialize_model(data)
-julia> model.probs[6]  # item probability of item 6
-julia> model.gammas  # normalization constants
-julia> add_to_H!(model, [6, 14, 24])  # add element to H
-julia> model.probs[6]
+```julia
+include("universal.jl")
+data = read_data("data/bakery-5-25.txt")
+for (size, choice) in iter_choices(data) # iterate over all subset selections
+	println("$size, $choice")
+end
+model = initialize_model(data)
+model.probs[6]  # item probability of item 6
+model.gammas  # normalization constants
+add_to_H!(model, [6, 14, 24])  # add element to H
+model.probs[6]
 ```
 
 ## Variable choice sets
 
 Compute summary statistics of datasets (most of Table 4):
-```
+```bash
 julia variable_statistics.jl
 ```
 
-Reproduce figures:
-```
-julia> include("variable_figures.jl")
-julia> variable_likelihood_gains_plot()  # Figure 3
+Reproduce figures (in Julia REPL):
+```julia
+include("variable_figures.jl")
+variable_likelihood_gains_plot()  # Figure 3
 ```
 
-Re-run experiments:
-```
-julia> include("variable_experiments.jl")
-julia> variable_likelihood_experiment("yc-cats-5-10-4-8.txt")
-julia> variable_likelihood_experiment("yc-items-5-10-4-8.txt")
+Re-run experiments (in Julia REPL):
+```julia
+include("variable_experiments.jl")
+variable_likelihood_experiment("yc-cats-5-10-4-8.txt")
+variable_likelihood_experiment("yc-items-5-10-4-8.txt")
 ```
 
 ## Data
