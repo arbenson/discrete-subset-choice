@@ -4,8 +4,9 @@ This repository accompanies the paper
 
 - Austin R. Benson, Ravi Kumar, and Andrew Tomkins. A Discrete Choice Model for Subset Selection. Proceedings of the eleventh ACM International Conference on Web Search and Data Mining (WSDM), 2018.
 
-We include Julia implementations of the algorithms and the datasets used in the paper.
-We also provide scripts for re-producing the figures and tables as well as re-producing the experimental results.
+We include Julia implementations of the algorithms and the datasets used in the paper. We also provide scripts for re-producing the figures and tables as well as re-producing the experimental results.
+
+Update August 27, 2018: The code has been updated to be compatible with Julia 1.0.
 
 ## Universal choice sets
 
@@ -17,17 +18,25 @@ julia universal_statistics.jl
 Reproduce figures (in the Julia REPL):
 ```julia
 include("universal_figures.jl")
-universal_likelihood_gains_plots()  # Figure 1
-negative_corrections_plot()  # Figure 2
+universal_likelihood_gains_plots()  # Figure 1 (universal-gains-*.eps)
+negative_corrections_plot()  # Figure 2 (negative_corrections.eps)
 ```
 
 Re-run experiments (commands here for specific datasets and to be run in the Julia REPL):
 ```julia
 include("universal_experiments.jl")
-universal_likelihood_experiments("bakery-5-25")  # data for Figure 1
-negative_corrections_experiment("walmart-items-5-25")  # data for Figure 2
-timing_experiment("kosarak-5-25")  # data for Table 2
-biggest_corrections_experiment("lastfm-genres-5-25")  # data for Table 3
+
+# data for Figure 1 (output/bakery-5-25-{freq,lift,nlift}.txt)
+universal_likelihood_experiments("bakery-5-25")
+
+# data for Figure 2 
+negative_corrections_experiment("walmart-items-5-25")  
+
+# data for Table 2 (output/kosarak-5-25-times.txt)
+timing_experiment("kosarak-5-25")  
+
+# data for Table 3 (output/lastfm-genres-5-25-biggest-corrections.txt)
+biggest_corrections_experiment("lastfm-genres-5-25")  
 ```
 
 Example usage of model:

@@ -189,9 +189,9 @@ function add_to_H!(model::UniversalChoiceModel, choice_to_add::Vector{Int64})
     for i = 1:length(model.item_counts)
         model.probs[i] = model.item_counts[i] / total
     end
-
     # Update normalization parameters
     model.gammas = normalization_values(length(model.gammas), model.H, model.probs)
+    return
 end
 
 function initialize_model(data::UniversalChoiceDataset)

@@ -166,6 +166,7 @@ function timing_experiment(basename::AbstractString)
     open("output/$basename-times.txt", "w") do f
         write(f, @sprintf("freq: %f\n", tf))
     end
+    return
 end
 
 # Use frequency, lift, and normalized lift heuristics to generate models.

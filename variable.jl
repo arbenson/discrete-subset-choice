@@ -1,5 +1,6 @@
 include("common.jl")
-using Optim
+using LinearAlgebra
+using Optim, LineSearches
 using Printf
 using StatsBase
 
@@ -345,7 +346,7 @@ function learn_utilities!(model::VariableChoiceModel, data::VariableChoiceDatase
     
     function update_model!(x::Vector{Float64})
         # Vector x contains item utilities and H utilities
-        x[find(isnan.(x))] = 0.0
+        x[findall(isnan.(x))] .= 0.0
         model.utilities = copy(x[1:n_items])
         for (tup, val) in zip(H_tups, x[(n_items + 1):end])
             set_H_value!(model, tup, val)
@@ -373,7 +374,7 @@ function learn_utilities!(model::VariableChoiceModel, data::VariableChoiceDatase
             update_gradient_from_slate!(model, grad, slate, size, H_inds) 
         end
         # scale the gradient because the exponentials can get too large
-        gnorm = norm(grad, 2)
+        gnorm = norm(grad, 2.0)
         if gnorm > 10
             for i = 1:length(x); grad[i] /= gnorm; end
         end
@@ -384,7 +385,7 @@ function learn_utilities!(model::VariableChoiceModel, data::VariableChoiceDatase
                             extended_trace=true, f_calls_limit=25)
     x0 = [copy(model.utilities); H_vals]
     res = optimize(neg_log_likelihood!, gradient!, x0,
-                   LBFGS(; linesearch=LineSearches.BackTracking()), options)
+                   LBFGS(; linesearch=BackTracking()), options)
     update_model!(res.minimizer)
 end
 
@@ -409,7 +410,7 @@ function learn_size_probs!(model::VariableChoiceModel, data::VariableChoiceDatas
             total = 1.0
             max_choice_size = min(slate_size - 1, length(x))
             for i in 2:max_choice_size; total += exp(x[i]); end
-            grad[2:max_choice_size] += exp.(x[2:max_choice_size]) / total
+            grad[2:max_choice_size] += exp.(x[2:max_choice_size]) ./ total
         end
     end
 
